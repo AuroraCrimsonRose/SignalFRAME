@@ -1,4 +1,4 @@
-# SignalFrame
+# SignalFRAME
 
 **Build It. Stream It. Own It.**  
 An open/modular radio station framework built by **CATALYSTS LABS**.
