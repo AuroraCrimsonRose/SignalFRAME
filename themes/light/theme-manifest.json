@@ -1,0 +1,14 @@
+{
+  "name": "Light Theme",
+  "id": "light",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A clean and bright light theme with soft tones.",
+  "type": "light",
+  "colors": {
+    "background": "#fefefe",
+    "text": "#222",
+    "accent": "#e0f0ff"
+  },
+  "hasVisualizer": false
+}

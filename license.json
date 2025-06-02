@@ -1,0 +1,13 @@
+{
+  "license_key": "SF-XXXX-XXXX-XXXX-XXXX",
+  "edition": "personal",
+  "branding": true,
+  "whmcs_integration": false,
+  "multi_user": false,
+  "external_db": false,
+  "enabled_modules": [
+    "theming",
+    "station_message",
+    "api_core"
+  ]
+}

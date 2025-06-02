@@ -1,0 +1,14 @@
+{
+  "name": "Dark Theme",
+  "id": "dark",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A crisp high-contrast dark theme for late-night listening.",
+  "type": "dark",
+  "colors": {
+    "background": "#0d0d0d",
+    "text": "#f0f0f0",
+    "accent": "#444"
+  },
+  "hasVisualizer": false
+}

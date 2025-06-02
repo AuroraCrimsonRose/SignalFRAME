@@ -1,0 +1,37 @@
+/* /themes/light/style.css */
+
+body {
+  background-color: #fefefe;
+  color: #222;
+  font-family: "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: #e0f0ff;
+  color: #222;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+main {
+  padding: 2rem;
+  text-align: center;
+}
+
+audio {
+  width: 80%;
+  max-width: 500px;
+  margin: 2rem 0;
+}
+
+footer {
+  background: #e0f0ff;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.8rem;
+  color: #444;
+  border-top: 1px solid #ccc;
+}
