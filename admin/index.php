@@ -1,4 +1,10 @@
 <?php
+/**
+ * SignalFrame by CATALYSTS LABS
+ * Copyright © 2025 CATALYSTS LABS
+ * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
+ */
+
 session_start();
 if (!isset($_SESSION['user'])) {
     header('Location: login.php');

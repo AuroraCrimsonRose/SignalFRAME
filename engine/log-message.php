@@ -1,4 +1,10 @@
 <?php
+/**
+ * SignalFrame by CATALYSTS LABS
+ * Copyright © 2025 CATALYSTS LABS
+ * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
+ */
+
 // /engine/log-message.php
 
 function logMessageChange($station, $newMessage, $user = 'admin') {

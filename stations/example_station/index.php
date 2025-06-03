@@ -1,4 +1,10 @@
 <?php
+/**
+ * SignalFrame by CATALYSTS LABS
+ * Copyright © 2025 CATALYSTS LABS
+ * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
+ */
+
 // /stations/example_station/index.php
 
 require_once __DIR__ . '/../../engine/license.php';

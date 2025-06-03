@@ -1,5 +1,12 @@
-<!-- /admin/templates/theme-selector.php -->
 <?php
+/**
+ * SignalFrame by CATALYSTS LABS
+ * Copyright © 2025 CATALYSTS LABS
+ * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
+ */
+
+<!-- /admin/templates/theme-selector.php -->
+
 require_once __DIR__ . '/../../engine/list-themes.php';
 $station = $_GET['station'] ?? 'example_station';
 $themes = listAvailableThemes(__DIR__ . "/../../stations/$station");

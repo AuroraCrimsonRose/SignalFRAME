@@ -1,3 +1,7 @@
+# SignalFrame Docker Compose setup
+# © 2025 CATALYSTS LABS
+# Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
+
 version: '3.8'
 
 services:
