@@ -6,73 +6,172 @@
  */
 
 session_start();
+
 if (!isset($_SESSION['user'])) {
     header('Location: login.php');
     exit;
 }
 
-// Get API token from session user data
-$apiToken = $_SESSION['user']['api_token'] ?? '';
+$user = $_SESSION['user'];
 
-// Sanitize token for JS and URL
-$apiTokenJs = htmlspecialchars($apiToken, ENT_QUOTES, 'UTF-8');
-$apiTokenUrl = urlencode($apiToken);
+// Load all stations from folder
+$stations = array_map('basename', glob(__DIR__ . '/../stations/*', GLOB_ONLYDIR));
 
-$stationDirs = glob(__DIR__ . '/../stations/*', GLOB_ONLYDIR);
-?>
-<!DOCTYPE html>
+// Get selected station from URL, fallback to first station or null
+$currentStation = $_GET['station'] ?? ($stations[0] ?? null);
+
+?><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>SignalFrame Admin Panel</title>
-  <header style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <h1>SignalFrame Admin Panel</h1>
-    <form action="/admin/logout.php" method="POST" style="margin:0;">
-      <button type="submit" style="padding:0.5rem 1rem; font-size:1rem; cursor:pointer;">Logout</button>
-    </form>
-  </header>
   <style>
     body {
       font-family: sans-serif;
       background: #111;
       color: #eee;
+      margin: 0; padding: 0;
+      min-height: 100vh;
+    }
+    header {
+      background: #222;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    label {
+      margin-right: 0.5rem;
+      font-weight: bold;
+    }
+    select, button {
+      padding: 0.4rem 0.7rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: none;
+      background: #444;
+      color: #eee;
+      cursor: pointer;
+    }
+    nav {
+      position: relative;
+      display: inline-block;
+    }
+    nav > button {
+      background: #444;
+    }
+    nav ul {
+      display: none;
+      position: absolute;
+      right: 0;
+      background: #222;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      border-radius: 4px;
+      min-width: 180px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    }
+    nav ul li {
+      border-bottom: 1px solid #333;
+    }
+    nav ul li:last-child {
+      border-bottom: none;
+    }
+    nav ul li a {
+      display: block;
+      color: #eee;
+      padding: 0.5rem 1rem;
+      text-decoration: none;
+    }
+    nav ul li a:hover {
+      background: #555;
+    }
+    nav.open ul {
+      display: block;
+    }
+    main {
       padding: 2rem;
+      max-width: 1200px;
+      margin: auto;
     }
-    h1 {
-      text-align: center;
+    .iframe-container {
       margin-bottom: 2rem;
-    }
-    .station {
-      background: #1e1e1e;
-      padding: 1rem;
-      margin: 1rem auto;
-      max-width: 900px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     }
     iframe {
       width: 100%;
-      height: 250px;
+      height: 350px;
       border: none;
-      margin-bottom: 1rem;
+      background: #000;
+      border-radius: 6px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.6);
     }
   </style>
+  <script>
+    function toggleSettingsDropdown() {
+      document.getElementById('settings-nav').classList.toggle('open');
+    }
+    function onStationChange(sel) {
+      const station = sel.value;
+      const params = new URLSearchParams(window.location.search);
+      params.set('station', station);
+      window.location.search = params.toString();
+    }
+    document.addEventListener('click', e => {
+      const nav = document.getElementById('settings-nav');
+      if (!nav.contains(e.target)) {
+        nav.classList.remove('open');
+      }
+    });
+  </script>
 </head>
 <body>
-  <h1>SignalFrame Admin Panel</h1>
-  <?php foreach ($stationDirs as $dir): 
-    $station = basename($dir);
-  ?>
-    <div class="station">
-      <h2><?= htmlspecialchars(ucwords(str_replace('_', ' ', $station))) ?></h2>
-      <iframe src="templates/station-settings.php?station=<?= urlencode($station) ?>&api_token=<?= $apiTokenUrl ?>"></iframe>
-      <iframe src="templates/log-viewer.php?station=<?= urlencode($station) ?>&api_token=<?= $apiTokenUrl ?>"></iframe>
-    </div>
-  <?php endforeach; ?>
 
-  <script>
-    window.SIGNALFRAME_API_TOKEN = "<?= $apiTokenJs ?>";
-  </script>
-  <script src="/admin/assets/ajax-forms.js"></script>
+<header>
+  <div>
+    <label for="station-select">Select Station:</label>
+    <select id="station-select" onchange="onStationChange(this)">
+      <?php foreach ($stations as $station): ?>
+        <option value="<?= htmlspecialchars($station) ?>" <?= $station === $currentStation ? 'selected' : '' ?>>
+          <?= htmlspecialchars(ucwords(str_replace('_', ' ', $station))) ?>
+        </option>
+      <?php endforeach; ?>
+    </select>
+  </div>
+
+  <nav id="settings-nav">
+    <button onclick="toggleSettingsDropdown()">Settings ▼</button>
+    <ul>
+      <li><a href="/admin/token-manager.php">Tokens</a></li>
+      <li><a href="/admin/user-list.php">Users</a></li>
+      <li><a href="/admin/settings.php">Settings</a></li>
+      <li><a href="/admin/station-manager.php">Station Manager</a></li>
+      <li><a href="/admin/system-logs.php">Logs</a></li>
+      <li><a href="/admin/account.php">Account</a></li>
+      <li><a href="/admin/logout.php">Logout</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <?php if ($currentStation === null): ?>
+    <p>No stations found. Please add a station folder.</p>
+  <?php else: ?>
+    <section class="iframe-container">
+      <h2>Settings for <?= htmlspecialchars(ucwords(str_replace('_', ' ', $currentStation))) ?></h2>
+      <iframe src="/admin/templates/station-settings.php?station=<?= urlencode($currentStation) ?>"></iframe>
+    </section>
+
+    <section class="iframe-container">
+      <h2>Logs for <?= htmlspecialchars(ucwords(str_replace('_', ' ', $currentStation))) ?></h2>
+      <iframe src="/admin/templates/log-viewer.php?station=<?= urlencode($currentStation) ?>"></iframe>
+    </section>
+  <?php endif; ?>
+</main>
+
 </body>
 </html>

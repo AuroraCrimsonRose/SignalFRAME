@@ -14,9 +14,11 @@ function unauthorized() {
     exit;
 }
 
+// Use session user if available
 if (isset($_SESSION['user'])) {
-    $user = $_SESSION['user'];
+    $user = $_SESSION['user'];  // <-- SESSION user, no token needed here
 } else {
+    // Otherwise require API token
     $token = null;
     $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
     if (preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
@@ -30,9 +32,16 @@ if (isset($_SESSION['user'])) {
     try {
         $pdo = new PDO('sqlite:' . __DIR__ . '/../config/users.sqlite');
         $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $stmt = $pdo->prepare('SELECT id, username, role FROM users WHERE api_token = ?');
+
+        $stmt = $pdo->prepare('
+            SELECT users.id, users.username, users.role 
+            FROM users 
+            JOIN api_tokens ON users.id = api_tokens.user_id 
+            WHERE api_tokens.token = ? AND api_tokens.revoked = 0
+        ');
         $stmt->execute([$token]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
         if (!$user) unauthorized();
     } catch (Exception $e) {
         http_response_code(500);
@@ -40,6 +49,7 @@ if (isset($_SESSION['user'])) {
         exit;
     }
 }
+
 
 $station = $_GET['station'] ?? null;
 if (!$station) {

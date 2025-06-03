@@ -30,21 +30,37 @@ function masterAdminExists($pdo) {
     return $stmt->fetchColumn() > 0;
 }
 
-// Create SQLite DB and users table with api_token column but do NOT generate tokens here
+// Create SQLite DB and users table with roles, station_id, and pfp_filename
 function createUsersDb() {
     global $usersDbFile;
     $pdo = new PDO('sqlite:' . $usersDbFile);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Create table including api_token column
+    // Create users table
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'admin',
+            role TEXT NOT NULL CHECK(role IN ('dj', 'webmaster', 'station_manager', 'admin')),
+            station_id TEXT DEFAULT NULL,
+            pfp_filename TEXT DEFAULT NULL,
             api_token TEXT UNIQUE,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    ");
+
+    // Create api_tokens table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS api_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            last_used_at DATETIME DEFAULT NULL,
+            usage_count INTEGER DEFAULT 0,
+            revoked INTEGER DEFAULT 0,
+            FOREIGN KEY(user_id) REFERENCES users(id)
         );
     ");
 
@@ -85,9 +101,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (masterAdminExists($pdo)) {
             $errors[] = 'Master admin user already exists. Setup cannot be rerun.';
         } else {
-            // Insert master admin user with hashed password (no API token)
+            // Insert master admin user with role=admin, no station_id or pfp_filename
             $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')");
+            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, role, station_id, pfp_filename) VALUES (?, ?, 'admin', NULL, NULL)");
             $stmt->execute([$username, $hash]);
             $success = true;
         }
