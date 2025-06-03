@@ -1,10 +1,23 @@
-SignalFrame - Public Edition
+SignalFrame Public Edition License
 Copyright (c) 2025 Aurora Rosabella / CATALYSTS LABS
 
-This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+This software is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
+You are free to:
+- Use, study, and modify this software for any purpose.
+- Run this software on a server, including in production.
+- Share it with others under the same license.
 
-You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+You must:
+- Provide access to the full source code of any modified version you host or deploy.
+- Include this license and copyright notice in all copies or substantial portions of the software.
 
-SPDX-License-Identifier: AGPL-3.0-or-later
+You may not:
+- Sub-license it under more restrictive or proprietary licenses.
+- Remove or alter the CATALYSTS LABS or Aurora Rosabella attribution.
+
+This license ensures that anyone interacting with this software over a network can also access the source.
+
+TL;DR: Use it, host it, modify it — just share your changes if it's public.
+
+SPDX-License-Identifier: AGPL-3.0-only
