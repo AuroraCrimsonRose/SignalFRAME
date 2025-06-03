@@ -1,5 +1,11 @@
-<!-- /admin/templates/message-editor.php -->
 <?php
+/**
+ * SignalFrame by CATALYSTS LABS
+ * Copyright © 2025 CATALYSTS LABS
+ * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
+ */
+<!-- /admin/templates/message-editor.php -->
+
 $station = $_GET['station'] ?? 'example_station';
 $stationPath = __DIR__ . "/../../stations/$station/";
 $messageFile = $stationPath . "message.txt";
