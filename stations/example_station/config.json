@@ -1,27 +1,27 @@
 {
-  "title": "Example Station",
-  "theme": "example_theme",
-  "stream_url": "https://stream.catalystslabs.com/example_station-128",
-  "description": "Your nightly fix of Something and Nothing.",
-  "fallback_mount": "/example_station-64",
-  "bitrate_options": [
-    {
-      "label": "High (320kbps)",
-      "mount": "/example_station-320"
-    },
-    {
-      "label": "Standard (128kbps)",
-      "mount": "/example_station-128",
-      "default": true
-    },
-    {
-      "label": "Low (64kbps)",
-      "mount": "/example_station-64"
+    "title": "Example Station",
+    "theme": "dark",
+    "stream_url": "https:\/\/stream.catalystslabs.com\/example_station-128",
+    "description": "Your nightly fix of Something and Nothing.",
+    "fallback_mount": "\/example_station-64",
+    "bitrate_options": [
+        {
+            "label": "High (320kbps)",
+            "mount": "\/example_station-320"
+        },
+        {
+            "label": "Standard (128kbps)",
+            "mount": "\/example_station-128",
+            "default": true
+        },
+        {
+            "label": "Low (64kbps)",
+            "mount": "\/example_station-64"
+        }
+    ],
+    "features": {
+        "visualizer": false,
+        "live_message": true,
+        "theme_switch": true
     }
-  ],
-  "features": {
-    "visualizer": false,
-    "live_message": true,
-    "theme_switch": true
-  }
 }

@@ -5,27 +5,58 @@
 version: '3.8'
 
 services:
-  web:
+  php:
+    image: php:8.3-fpm
+    container_name: signalframe_php
+    volumes:
+      - ./admin:/var/www/html/admin
+      - ./setup:/var/www/html/setup
+      - ./api:/var/www/html/api
+      - ./common:/var/www/html/common
+      - ./stations:/var/www/html/stations
+      - ./engine:/var/www/html/engine
+      - ./themes:/var/www/html/themes
+      - ./config:/var/www/html/config
+      - ./logs:/var/www/html/logs
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    environment:
+      - TZ=America/New_York  # Adjust to your timezone
+    networks:
+      - signalframe_net
+
+  nginx:
     image: nginx:latest
+    container_name: signalframe_nginx
+    depends_on:
+      - php
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./www:/var/www/html
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    depends_on:
-      - php
+      - ./admin:/var/www/html/admin
+      - ./setup:/var/www/html/setup
+      - ./api:/var/www/html/api
+      - ./common:/var/www/html/common
+      - ./stations:/var/www/html/stations
+      - ./engine:/var/www/html/engine
+      - ./themes:/var/www/html/themes
+      - ./config:/var/www/html/config
+      - ./logs:/var/www/html/logs
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - signalframe_net
 
-  php:
-    image: php:8.2-fpm
-    volumes:
-      - ./www:/var/www/html
+  # Optional: Use your own Icecast stream externally or add container here:
+  # icecast:
+  #   image: infiniteproject/icecast
+  #   container_name: signalframe_icecast
+  #   ports:
+  #     - "8000:8000"
+  #   volumes:
+  #     - ./icecast-config:/etc/icecast2
+  #   networks:
+  #     - signalframe_net
 
-  icecast:
-    image: infinityradio/icecast
-    ports:
-      - "8000:8000"
-    environment:
-      ICECAST_SOURCE_PASSWORD: change_this
-      ICECAST_ADMIN_PASSWORD: change_this
-      ICECAST_RELAY_PASSWORD: change_this
+networks:
+  signalframe_net:
+    driver: bridge

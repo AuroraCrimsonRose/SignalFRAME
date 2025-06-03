@@ -11,6 +11,13 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
+// Get API token from session user data
+$apiToken = $_SESSION['user']['api_token'] ?? '';
+
+// Sanitize token for JS and URL
+$apiTokenJs = htmlspecialchars($apiToken, ENT_QUOTES, 'UTF-8');
+$apiTokenUrl = urlencode($apiToken);
+
 $stationDirs = glob(__DIR__ . '/../stations/*', GLOB_ONLYDIR);
 ?>
 <!DOCTYPE html>
@@ -18,6 +25,12 @@ $stationDirs = glob(__DIR__ . '/../stations/*', GLOB_ONLYDIR);
 <head>
   <meta charset="UTF-8" />
   <title>SignalFrame Admin Panel</title>
+  <header style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1>SignalFrame Admin Panel</h1>
+    <form action="/admin/logout.php" method="POST" style="margin:0;">
+      <button type="submit" style="padding:0.5rem 1rem; font-size:1rem; cursor:pointer;">Logout</button>
+    </form>
+  </header>
   <style>
     body {
       font-family: sans-serif;
@@ -52,9 +65,14 @@ $stationDirs = glob(__DIR__ . '/../stations/*', GLOB_ONLYDIR);
   ?>
     <div class="station">
       <h2><?= htmlspecialchars(ucwords(str_replace('_', ' ', $station))) ?></h2>
-      <iframe src="templates/station-settings.php?station=<?= urlencode($station) ?>"></iframe>
-      <iframe src="templates/log-viewer.php?station=<?= urlencode($station) ?>"></iframe>
+      <iframe src="templates/station-settings.php?station=<?= urlencode($station) ?>&api_token=<?= $apiTokenUrl ?>"></iframe>
+      <iframe src="templates/log-viewer.php?station=<?= urlencode($station) ?>&api_token=<?= $apiTokenUrl ?>"></iframe>
     </div>
   <?php endforeach; ?>
+
+  <script>
+    window.SIGNALFRAME_API_TOKEN = "<?= $apiTokenJs ?>";
+  </script>
+  <script src="/admin/assets/ajax-forms.js"></script>
 </body>
 </html>
