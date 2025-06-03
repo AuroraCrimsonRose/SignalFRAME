@@ -1,0 +1,13 @@
+SignalFrame - Commercial Edition
+Copyright (c) 2025 Aurora Rosabella / CATALYSTS LABS
+
+This software is proprietary and confidential. Unauthorized copying of this file, via any medium, is strictly prohibited. Redistribution or reverse engineering is not permitted without the express written consent of CATALYSTS LABS.
+
+You may not:
+- Redistribute or sublicense this software
+- Modify or reverse-engineer the binary
+- Use the personal edition to bypass payment or licensing restrictions
+
+To obtain commercial licenses or custom deployment rights, contact: support@catalystslabs.com
+
+SPDX-License-Identifier: LicenseRef-SignalFrame-Commercial

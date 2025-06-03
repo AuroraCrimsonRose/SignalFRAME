@@ -39,7 +39,6 @@ Redistribute, resell, or reverse-engineer the commercial edition without explici
 Use the personal edition as a basis for commercial resale or integration.
 
 To inquire about licensing terms or enterprise deployment, contact:
-
 support@catalystslabs.com
 
 Dual-Licensing Notice
@@ -52,3 +51,4 @@ The commercial edition is closed-source and proprietary.
 
 Make sure you're complying with the correct license depending on which version you're using.
 
+SPDX-License-Identifier: AGPL-3.0-or-later / LicenseRef-SignalFrame-Commercial
