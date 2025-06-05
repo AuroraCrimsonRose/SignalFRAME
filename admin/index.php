@@ -147,7 +147,7 @@ $currentStation = $_GET['station'] ?? ($stations[0] ?? null);
     <button onclick="toggleSettingsDropdown()">Settings ▼</button>
     <ul>
       <li><a href="/admin/token-manager.php">Tokens</a></li>
-      <li><a href="/admin/user-list.php">Users</a></li>
+      <li><a href="/admin/user-manager.php">User Manager</a></li>
       <li><a href="/admin/settings.php">Settings</a></li>
       <li><a href="/admin/station-manager.php">Station Manager</a></li>
       <li><a href="/admin/system-logs.php">Logs</a></li>
