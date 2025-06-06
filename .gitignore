@@ -1,0 +1,12 @@
+# Ignore the SQLite database
+/config/users.sqlite
+
+# Ignore everything under stations/ except the disabled folder itself
+/stations/*
+!/stations/disabled/
+
+# But ignore all contents inside disabled/
+/stations/disabled/*
+
+# Ignore VS Code workspace file
+/SignalFRAME.code-workspace
