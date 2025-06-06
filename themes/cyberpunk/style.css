@@ -1,0 +1,280 @@
+/* Cyberpunk Theme (Full-Page, Polished) */
+
+:root {
+  --bg-color: #080810;
+  --text-color: #E0E0E0;
+  --accent-color: #FF00FF;
+  --highlight-color: #00FFFF;
+  --panel-bg: #1B1B2A;
+  --panel-border: #FF00FF;
+  --button-bg: #2A2A46;
+  --button-hover: #36364F;
+  --card-bg: #20204A;
+  --card-shadow: rgba(0, 0, 0, 0.9);
+  --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Full-height */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-main);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Neon grid overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    linear-gradient(rgba(0,255,255,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,0,255,0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header/Footer */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel-bg);
+  border-bottom: 2px solid var(--panel-border);
+  padding: 1rem 2rem;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+}
+header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 1px;
+  color: var(--accent-color);
+  text-shadow: 0 0 6px var(--highlight-color);
+}
+
+main {
+  flex: 1;
+  margin-top: 80px;  /* header height */
+  margin-bottom: 60px; /* footer height */
+  padding: 2rem 2rem;
+  overflow-y: auto;
+  z-index: 1;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel-bg);
+  border-top: 2px solid var(--panel-border);
+  padding: 1rem 2rem;
+  color: var(--text-color);
+  text-align: center;
+  backdrop-filter: blur(6px);
+}
+
+/* Buttons/links */
+a, .dash-button, button, input[type="submit"] {
+  position: relative;
+  background-color: var(--button-bg);
+  color: var(--accent-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  font-family: var(--font-main);
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 14px var(--card-shadow);
+}
+
+a::after, .dash-button::after, button::after, input[type="submit"]::after {
+  content: "";
+  position: absolute;
+  top: -4px; bottom: -4px; left: -4px; right: -4px;
+  border: 2px solid var(--highlight-color);
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+a:hover, .dash-button:hover, button:hover, input[type="submit"]:hover {
+  background-color: var(--button-hover);
+  color: var(--highlight-color);
+  box-shadow: 0 6px 20px var(--card-shadow), 0 0 10px var(--highlight-color);
+}
+
+a:hover::after, .dash-button:hover::after, button:hover::after, input[type="submit"]:hover::after {
+  opacity: 1;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Cards and Stats */
+.stat-box, .card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 6px 20px var(--card-shadow), 0 0 8px var(--accent-color);
+  transition: transform 0.2s ease;
+}
+
+.stat-box:hover, .card:hover {
+  transform: scale(1.02);
+}
+
+.stats-grid {
+  display: grid;
+  gap: 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.stat-box h3 {
+  margin: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.25rem;
+  color: var(--accent-color);
+  text-shadow: 0 0 4px var(--highlight-color);
+}
+
+.stat-box p {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+/* Tables */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.table-responsive th,
+.table-responsive td {
+  padding: 0.9rem 1.2rem;
+  text-align: left;
+}
+
+.table-responsive th {
+  background-color: var(--panel-bg);
+  color: var(--accent-color);
+  font-size: 1rem;
+  border-bottom: 2px solid var(--panel-border);
+  text-transform: uppercase;
+}
+
+.table-responsive td {
+  background-color: var(--card-bg);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.table-responsive tr:hover td {
+  background-color: var(--button-hover);
+}
+
+/* Form inputs */
+.input-field, input[type="text"], input[type="email"], input[type="password"], select {
+  width: 100%;
+  padding: 0.8rem 1.2rem;
+  background-color: var(--button-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  color: var(--text-color);
+  font-family: var(--font-main);
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.input-field:focus, select:focus {
+  outline: none;
+  border-color: var(--highlight-color);
+  box-shadow: 0 0 6px var(--highlight-color);
+}
+
+/* Modal windows */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--card-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px var(--card-shadow), 0 0 10px var(--accent-color);
+  padding: 2rem;
+  width: 90%;
+  max-width: 600px;
+  z-index: 2000;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--accent-color);
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px var(--highlight-color);
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--accent-color);
+}
+
+/* Accent neon lines */
+:root {
+  --neon: rgba(255, 0, 255, 0.3);
+}
+body::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(45deg, var(--neon) 25%, transparent 25%, transparent 75%, var(--neon) 75%, var(--neon)),
+              linear-gradient(45deg, var(--neon) 25%, transparent 25%, transparent 75%, var(--neon) 75%, var(--neon));
+  background-size: 50px 50px;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
+}

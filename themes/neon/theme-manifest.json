@@ -1,0 +1,14 @@
+{
+  "name": "Neon Theme",
+  "id": "neon",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A vibrant neon theme with glowing accents and dark mode.",
+  "type": "dark",
+  "colors": {
+    "background": "#000000",
+    "text": "#ffffff",
+    "accent": "#39ff14"
+  },
+  "hasVisualizer": true
+}

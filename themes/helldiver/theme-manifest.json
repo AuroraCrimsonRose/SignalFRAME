@@ -1,0 +1,14 @@
+{
+  "name": "Helldiver Theme",
+  "id": "helldiver",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A rugged, metallic look inspired by Helldivers—dark steel backgrounds with red highlights.",
+  "type": "dark",
+  "colors": {
+    "background": "#131313",
+    "text": "#E0E0E0",
+    "accent": "#AA0000"
+  },
+  "hasVisualizer": false
+}

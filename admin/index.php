@@ -5,173 +5,156 @@
  * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
  */
 
-session_start();
-
+// 1) Start session and guard access
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user'])) {
-    header('Location: login.php');
+    header('Location: /admin/login.php');
     exit;
 }
 
-$user = $_SESSION['user'];
+// 2) Page title
+$pageTitle = "Dashboard";
 
-// Load all stations from folder
-$stations = array_map('basename', glob(__DIR__ . '/../stations/*', GLOB_ONLYDIR));
+// 3) Include API functions
+require_once __DIR__ . '/../api/getAlerts.php';
+require_once __DIR__ . '/../api/getStationCount.php';
+require_once __DIR__ . '/../api/getUserCount.php';
+require_once __DIR__ . '/../api/getTokenCount.php';
+require_once __DIR__ . '/../api/getRecentLogs.php';
+require_once __DIR__ . '/../api/getHealthChecks.php';
+require_once __DIR__ . '/../api/getLicenseData.php';
+require_once __DIR__ . '/../api/getNewUsers.php';
+require_once __DIR__ . '/../api/getDiskRamUsage.php';
 
-// Get selected station from URL, fallback to first station or null
-$currentStation = $_GET['station'] ?? ($stations[0] ?? null);
+// 4) Fetch data via API calls
+$alerts        = getAlerts();
+$totalStations = getStationCount();
+$totalUsers    = getUserCount();
+$tokenCount    = getTokenCount();
+$recentLogs    = getRecentLogs();
+$health        = getHealthChecks();
+$licenseData   = getLicenseData();
+$newUsers      = getNewUsers();
+$diskRam       = getDiskRamUsage();
 
-?><!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SignalFrame Admin Panel</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #111;
-      color: #eee;
-      margin: 0; padding: 0;
-      min-height: 100vh;
-    }
-    header {
-      background: #222;
-      padding: 1rem 2rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    label {
-      margin-right: 0.5rem;
-      font-weight: bold;
-    }
-    select, button {
-      padding: 0.4rem 0.7rem;
-      font-size: 1rem;
-      border-radius: 4px;
-      border: none;
-      background: #444;
-      color: #eee;
-      cursor: pointer;
-    }
-    nav {
-      position: relative;
-      display: inline-block;
-    }
-    nav > button {
-      background: #444;
-    }
-    nav ul {
-      display: none;
-      position: absolute;
-      right: 0;
-      background: #222;
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      border-radius: 4px;
-      min-width: 180px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.8);
-    }
-    nav ul li {
-      border-bottom: 1px solid #333;
-    }
-    nav ul li:last-child {
-      border-bottom: none;
-    }
-    nav ul li a {
-      display: block;
-      color: #eee;
-      padding: 0.5rem 1rem;
-      text-decoration: none;
-    }
-    nav ul li a:hover {
-      background: #555;
-    }
-    nav.open ul {
-      display: block;
-    }
-    main {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: auto;
-    }
-    .iframe-container {
-      margin-bottom: 2rem;
-    }
-    iframe {
-      width: 100%;
-      height: 350px;
-      border: none;
-      background: #000;
-      border-radius: 6px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.6);
-    }
-  </style>
-  <script>
-    function toggleSettingsDropdown() {
-      document.getElementById('settings-nav').classList.toggle('open');
-    }
-    function onStationChange(sel) {
-      const station = sel.value;
-      const params = new URLSearchParams(window.location.search);
-      params.set('station', station);
-      window.location.search = params.toString();
-    }
-    document.addEventListener('click', e => {
-      const nav = document.getElementById('settings-nav');
-      if (!nav.contains(e.target)) {
-        nav.classList.remove('open');
-      }
-    });
-  </script>
-</head>
-<body>
+// 5) Uptime (we can leave this inline, since it’s a simple shell_exec)
+$uptime = shell_exec('uptime -p') ?: 'Unavailable';
 
-<header>
-  <div>
-    <label for="station-select">Select Station:</label>
-    <select id="station-select" onchange="onStationChange(this)">
-      <?php foreach ($stations as $station): ?>
-        <option value="<?= htmlspecialchars($station) ?>" <?= $station === $currentStation ? 'selected' : '' ?>>
-          <?= htmlspecialchars(ucwords(str_replace('_', ' ', $station))) ?>
-        </option>
-      <?php endforeach; ?>
-    </select>
+// 6) Capture page content
+ob_start();
+?>
+
+<?php if (!empty($alerts)): ?>
+  <div class="alert-banner">
+    <?php foreach ($alerts as $alert): ?>
+      <div class="alert-item">⚠️ <?= htmlspecialchars($alert) ?></div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
+<h2>Welcome, <?= htmlspecialchars($_SESSION['user']['username'] ?? 'Admin') ?> 👋</h2>
+<p>Your role: <strong><?= htmlspecialchars($_SESSION['user']['role']) ?></strong></p>
+
+<div class="quick-actions">
+  <a href="/admin/user-manager.php"      class="dash-button">User Manager</a>
+  <a href="/admin/station-manager.php"   class="dash-button">Station Manager</a>
+  <a href="/admin/settings.php"          class="dash-button">Settings</a>
+  <a href="/admin/system-logs.php"       class="dash-button">Logs</a>
+  <a href="/admin/token-manager.php"     class="dash-button">Tokens</a>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-box"><h3>Total Users</h3><p><?= $totalUsers ?></p></div>
+  <div class="stat-box"><h3>Total Stations</h3><p><?= $totalStations ?></p></div>
+  <div class="stat-box"><h3>Active API Tokens</h3><p><?= $tokenCount ?></p></div>
+  <div class="stat-box"><h3>PHP Version</h3><p><?= phpversion() ?></p></div>
+  <div class="stat-box"><h3>Server Uptime</h3><p><?= htmlspecialchars($uptime) ?></p></div>
+</div>
+
+<div class="health-grid">
+  <div class="stat-box">
+    <h3>System Health</h3>
+    <?php foreach ($health as $label => $value): ?>
+      <p><strong><?= htmlspecialchars($label) ?>:</strong> <?= htmlspecialchars($value) ?></p>
+    <?php endforeach; ?>
   </div>
 
-  <nav id="settings-nav">
-    <button onclick="toggleSettingsDropdown()">Settings ▼</button>
-    <ul>
-      <li><a href="/admin/token-manager.php">Tokens</a></li>
-      <li><a href="/admin/user-manager.php">User Manager</a></li>
-      <li><a href="/admin/settings.php">Settings</a></li>
-      <li><a href="/admin/station-manager.php">Station Manager</a></li>
-      <li><a href="/admin/system-logs.php">Logs</a></li>
-      <li><a href="/admin/account.php">Account</a></li>
-      <li><a href="/admin/logout.php">Logout</a></li>
-    </ul>
-  </nav>
-</header>
-
-<main>
-  <?php if ($currentStation === null): ?>
-    <p>No stations found. Please add a station folder.</p>
-  <?php else: ?>
-    <section class="iframe-container">
-      <h2>Settings for <?= htmlspecialchars(ucwords(str_replace('_', ' ', $currentStation))) ?></h2>
-      <iframe src="/admin/templates/station-settings.php?station=<?= urlencode($currentStation) ?>"></iframe>
-    </section>
-
-    <section class="iframe-container">
-      <h2>Logs for <?= htmlspecialchars(ucwords(str_replace('_', ' ', $currentStation))) ?></h2>
-      <iframe src="/admin/templates/log-viewer.php?station=<?= urlencode($currentStation) ?>"></iframe>
-    </section>
+  <?php if ($licenseData): ?>
+    <div class="stat-box">
+      <h3>License</h3>
+      <p><strong>Edition:</strong> <?= htmlspecialchars(ucfirst($licenseData['edition'] ?? 'unknown')) ?></p>
+      <p><strong>Modules:</strong> <?= htmlspecialchars(implode(', ', $licenseData['enabled_modules'] ?? [])) ?></p>
+      <p><strong>Branding:</strong> <?= $licenseData['branding'] ? 'Enabled' : 'Disabled' ?></p>
+      <p><strong>WHMCS:</strong> <?= $licenseData['whmcs_integration'] ? 'Yes' : 'No' ?></p>
+    </div>
   <?php endif; ?>
-</main>
 
-</body>
-</html>
+  <div class="stat-box">
+    <h3>Disk & RAM Usage</h3>
+    <p>
+      <strong>Disk Used:</strong>
+      <?= $diskRam['disk_used_mb'] ?> MB
+      / <?= $diskRam['disk_total_mb'] ?> MB
+      (<?= $diskRam['disk_pct'] ?>%)
+    </p>
+    <?php if ($diskRam['mem_pct'] !== null): ?>
+      <p>
+        <strong>RAM Used:</strong>
+        <?= round($diskRam['mem_used_mb'], 1) ?> MB
+        / <?= round($diskRam['mem_total_mb'], 1) ?> MB
+        (<?= $diskRam['mem_pct'] ?>%)
+      </p>
+    <?php else: ?>
+      <p><em>RAM data unavailable</em></p>
+    <?php endif; ?>
+  </div>
+
+  <!-- <div class="stat-box">
+    <h3>New Station</h3>
+    <p>Create a fresh station with one click:</p>
+    <a href="/admin/create-station.php"
+       style="display:inline-block;margin-top:8px;padding:10px 16px;
+              background:#4caf50;color:#fff;border-radius:6px;
+              text-decoration:none;font-weight:bold;">
+      + New Station
+    </a>
+  </div> -->
+</div>
+
+<div class="stats-grid" style="margin-top: 20px;">
+  <div class="stat-box" style="grid-column: span 2;">
+    <h3>New Registrations</h3>
+    <ul style="list-style:none;padding-left:0;margin:0;">
+      <?php foreach ($newUsers as $u): ?>
+        <li style="margin-bottom:6px;">
+          <strong><?= htmlspecialchars($u['username']) ?></strong>
+          &mdash; <?= htmlspecialchars(date('M j, Y', strtotime($u['created_at']))) ?>
+        </li>
+      <?php endforeach; ?>
+    </ul>
+    <a href="/admin/user-manager.php"
+       style="display:block;margin-top:8px;font-size:13px;color:#4caf50;
+              text-decoration:none;">
+      Manage Users →
+    </a>
+  </div>
+</div>
+
+<div class="recent-logs" style="margin-top:30px;">
+  <h3>Recent Activity</h3>
+  <ul style="list-style:none;padding-left:0;">
+    <?php foreach ($recentLogs as $log): ?>
+      <li style="font-size:14px;margin-bottom:6px;">
+        <code><?= htmlspecialchars($log['timestamp']) ?></code> &mdash;
+        <?= htmlspecialchars($log['message']) ?>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+</div>
+
+<?php
+$pageContent = ob_get_clean();
+include __DIR__ . '/_template.php';
+?>

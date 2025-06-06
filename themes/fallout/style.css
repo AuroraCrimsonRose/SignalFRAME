@@ -1,0 +1,250 @@
+/* Fallout Theme (Full-Page, Polished) */
+
+:root {
+  --bg-color: #121212;
+  --text-color: #00FF00;
+  --accent-color: #FFA500;
+  --panel-bg: #1E1E1E;
+  --panel-border: #555500;
+  --button-bg: #262626;
+  --button-hover: #333333;
+  --card-bg: #1F1F1F;
+  --card-shadow: rgba(0, 0, 0, 0.7);
+  --font-main: 'Courier New', Courier, monospace;
+}
+
+/* Ensure body and html fill the viewport */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-main);
+  overflow-x: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header and Footer fixed */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel-bg);
+  border-bottom: 2px solid var(--panel-border);
+  padding: 1rem 2rem;
+  color: var(--accent-color);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  text-shadow: 0 0 4px var(--accent-color);
+}
+header .user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+main {
+  flex: 1;
+  margin-top: 80px; /* space for header */
+  margin-bottom: 60px; /* space for footer */
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+}
+
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel-bg);
+  border-top: 2px solid var(--panel-border);
+  padding: 1rem 2rem;
+  color: var(--accent-color);
+  text-align: center;
+}
+
+/* Buttons and links */
+a, .dash-button, button, input[type="submit"] {
+  background-color: var(--button-bg);
+  color: var(--accent-color);
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: bold;
+  font-family: var(--font-main);
+  transition: background-color 0.2s ease, color 0.2s ease;
+  box-shadow: 0 2px 8px var(--card-shadow);
+}
+
+a:hover, .dash-button:hover, button:hover, input[type="submit"]:hover {
+  background-color: var(--button-hover);
+  color: var(--text-color);
+}
+
+/* Container for page content */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Cards and stats */
+.stat-box, .card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+.stats-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.stat-box h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  color: var(--accent-color);
+}
+
+.stat-box p {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+/* Tables */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+}
+
+.table-responsive th,
+.table-responsive td {
+  padding: 0.8rem 1rem;
+  text-align: left;
+}
+
+.table-responsive th {
+  background-color: var(--panel-bg);
+  color: var(--accent-color);
+  font-size: 1rem;
+  border-bottom: 2px solid var(--panel-border);
+}
+
+.table-responsive td {
+  background-color: var(--card-bg);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.table-responsive tr:hover td {
+  background-color: var(--button-hover);
+}
+
+/* Form inputs */
+.input-field, input[type="text"], input[type="email"], input[type="password"], select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: var(--button-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-family: var(--font-main);
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+.input-field:focus, select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 6px var(--accent-color);
+}
+
+/* Modal windows */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--card-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px var(--card-shadow);
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 600px;
+  z-index: 2000;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--accent-color);
+  font-size: 1.3rem;
+  text-shadow: 0 0 6px var(--accent-color);
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-color);
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--accent-color);
+}
+
+/* Scrollbars (Fallout-style) */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--panel-bg);
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--accent-color);
+  border-radius: 6px;
+  border: 3px solid var(--panel-bg);
+}
+
+/* Example background “terminal” grid overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: linear-gradient(rgba(0, 255, 0, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 255, 0, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 0;
+}

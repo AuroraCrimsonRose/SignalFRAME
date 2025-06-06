@@ -1,0 +1,14 @@
+{
+  "name": "Fallout Theme",
+  "id": "fallout",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A retro‐nuclear look inspired by the Fallout series—greens on dark backgrounds with Vault‐Tec accents.",
+  "type": "dark",
+  "colors": {
+    "background": "#181818",
+    "text": "#00FF00",
+    "accent": "#FFA500"
+  },
+  "hasVisualizer": false
+}

@@ -5,177 +5,231 @@
  * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
  */
 
-session_start();
+// Ensure session is started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-$usersDbFile = __DIR__ . '/../config/users.sqlite';
+// Path to SQLite file under config/
+$dbPath = __DIR__ . '/../config/users.sqlite';
 
-// Define your valid registration keys here (in production, store securely)
+// Whitelisted registration keys
 $validKeys = [
-    'TEST-KEY-12345-ABCDE', // Test key for development
-    // Add other valid keys here
+    'TEST-KEY-12345-ABCDE',
+    // …add more keys here if needed
 ];
 
-$errors = [];
-$success = false;
+$errors  = [];
+$success = '';
 
-// Check if users DB and master admin exists
-function usersDbExists() {
-    global $usersDbFile;
-    return file_exists($usersDbFile);
+// If the file already exists and there's an admin, prevent re‐setup
+if (file_exists($dbPath)) {
+    try {
+        $pdoCheck   = new PDO('sqlite:' . $dbPath);
+        $pdoCheck->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Check for existing admin
+        $stmtCheck  = $pdoCheck->query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+        $adminCount = (int) $stmtCheck->fetchColumn();
+        if ($adminCount > 0) {
+            $errors[] = "Setup has already been completed. An admin account exists.";
+        }
+    } catch (Exception $e) {
+        // If users table doesn’t exist yet, ignore and let form run
+    }
 }
 
-function masterAdminExists($pdo) {
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role = 'admin'");
-    $stmt->execute();
-    return $stmt->fetchColumn() > 0;
-}
-
-// Create SQLite DB and users table with roles, station_id, and pfp_filename
-function createUsersDb() {
-    global $usersDbFile;
-    $pdo = new PDO('sqlite:' . $usersDbFile);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    // Create users table
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('dj', 'webmaster', 'station_manager', 'admin')),
-            station_id TEXT DEFAULT NULL,
-            pfp_filename TEXT DEFAULT NULL,
-            api_token TEXT UNIQUE,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-    ");
-
-    // Create api_tokens table
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS api_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            last_used_at DATETIME DEFAULT NULL,
-            usage_count INTEGER DEFAULT 0,
-            revoked INTEGER DEFAULT 0,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        );
-    ");
-
-    return $pdo;
-}
-
-// Handle POST submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $regKey = trim($_POST['reg_key'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
     $username = trim($_POST['username'] ?? '');
+    $email    = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $passwordConfirm = $_POST['password_confirm'] ?? '';
+    $regKey   = trim($_POST['reg_key'] ?? '');
 
-    // Validate registration key
+    // Basic validation
+    if ($username === '') {
+        $errors[] = "Username is required.";
+    }
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "A valid email address is required.";
+    }
+    if (strlen($password) < 8) {
+        $errors[] = "Password must be at least 8 characters long.";
+    }
     if (!in_array($regKey, $validKeys, true)) {
-        $errors[] = 'Invalid registration key.';
-    }
-
-    // Validate username
-    if (empty($username) || !preg_match('/^[a-zA-Z0-9_\-]{3,20}$/', $username)) {
-        $errors[] = 'Username must be 3-20 characters, alphanumeric, underscore or dash.';
-    }
-
-    // Validate passwords
-    if (empty($password)) {
-        $errors[] = 'Password cannot be empty.';
-    } elseif ($password !== $passwordConfirm) {
-        $errors[] = 'Passwords do not match.';
-    } elseif (strlen($password) < 8) {
-        $errors[] = 'Password must be at least 8 characters.';
+        $errors[] = "Invalid registration key.";
     }
 
     if (empty($errors)) {
-        // Create DB and users table if not exist
-        $pdo = createUsersDb();
-
-        // Check if master admin exists already
-        if (masterAdminExists($pdo)) {
-            $errors[] = 'Master admin user already exists. Setup cannot be rerun.';
-        } else {
-            // Insert master admin user with role=admin, no station_id or pfp_filename
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO users (username, password_hash, role, station_id, pfp_filename) VALUES (?, ?, 'admin', NULL, NULL)");
-            $stmt->execute([$username, $hash]);
-            $success = true;
+        // Ensure config/ directory exists
+        $dir = dirname($dbPath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
         }
+
+        // Create or open the SQLite database under config/
+        $pdo = new PDO('sqlite:' . $dbPath);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        // Create users table
+        $createUsers = "
+            CREATE TABLE IF NOT EXISTS users (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                username      TEXT    NOT NULL UNIQUE,
+                email         TEXT    NOT NULL UNIQUE,
+                password_hash TEXT    NOT NULL,
+                role          TEXT    NOT NULL,
+                station_id    INTEGER DEFAULT NULL,
+                api_token     TEXT    DEFAULT NULL,
+                created_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        ";
+        $pdo->exec($createUsers);
+
+        // Create api_tokens table
+        $createTokens = "
+            CREATE TABLE IF NOT EXISTS api_tokens (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id    INTEGER NOT NULL,
+                token      TEXT    NOT NULL UNIQUE,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+        ";
+        $pdo->exec($createTokens);
+
+        // Create logs table
+        $createLogs = "
+            CREATE TABLE IF NOT EXISTS logs (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id   INTEGER,
+                level     TEXT    NOT NULL,
+                message   TEXT    NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            );
+        ";
+        $pdo->exec($createLogs);
+
+        // Insert master‐admin user
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        $insert       = $pdo->prepare("
+            INSERT INTO users (username, email, password_hash, role)
+            VALUES (:username, :email, :pw, 'admin')
+        ");
+        $insert->execute([
+            ':username' => $username,
+            ':email'    => $email,
+            ':pw'       => $passwordHash,
+        ]);
+
+        $_SESSION['flash'] = "Master admin created. You can now log in.";
+        header('Location: /admin/login.php');
+        exit;
     }
 }
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SignalFrame Setup - Create Master Admin</title>
-<style>
-    body { font-family: Arial, sans-serif; max-width: 480px; margin: 2rem auto; padding: 1rem; }
-    label { display: block; margin-top: 1rem; }
-    input[type=text], input[type=password] { width: 100%; padding: 0.5rem; font-size: 1rem; }
-    button { margin-top: 1.5rem; padding: 0.75rem 1.5rem; font-size: 1rem; }
-    .error { background: #fdd; padding: 1rem; border: 1px solid #f99; margin-bottom: 1rem; }
-    .success { background: #dfd; padding: 1rem; border: 1px solid #9f9; margin-bottom: 1rem; }
-</style>
+    <meta charset="UTF-8">
+    <title>SignalFrame Setup</title>
+    <link rel="stylesheet" href="/admin/assets/admin-style.css">
+    <style>
+        /* Minimal inline styling for the setup form */
+        .setup-box {
+            max-width: 420px;
+            margin: 3rem auto;
+            background: #1e1e1e;
+            padding: 2rem;
+            border-radius: 8px;
+            color: #fff;
+        }
+        .setup-box h2 {
+            margin-bottom: 1rem;
+        }
+        .setup-box label {
+            display: block;
+            margin-top: 0.75rem;
+        }
+        .setup-box input {
+            width: 100%;
+            padding: 0.5rem;
+            background: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .setup-box .btn {
+            margin-top: 1rem;
+            width: 100%;
+        }
+        .alert-error {
+            background: #8b0000;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+        .alert-success {
+            background: #006400;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
+    <div class="setup-box">
+        <h2>SignalFrame Setup</h2>
 
-<h2>SignalFrame Setup</h2>
+        <?php if (!empty($errors)): ?>
+            <div class="alert-error">
+                <ul>
+                    <?php foreach ($errors as $e): ?>
+                        <li><?php echo htmlspecialchars($e); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
 
-<?php if ($success): ?>
-    <div class="success">
-        Master admin user created successfully!<br />
-        Please delete or secure this setup script now.<br />
-        <a href="/admin/login.php">Go to Login</a>
+        <form method="POST" action="/setup/setup.php">
+            <label for="username">Admin Username</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                value="<?php echo isset($username) ? htmlspecialchars($username) : ''; ?>"
+                required
+            >
+
+            <label for="email">Admin Email</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                value="<?php echo isset($email) ? htmlspecialchars($email) : ''; ?>"
+                required
+            >
+
+            <label for="password">Password (min 8 characters)</label>
+            <input
+                type="password"
+                id="password"
+                name="password"
+                minlength="8"
+                required
+            >
+
+            <label for="reg_key">Registration Key</label>
+            <input
+                type="text"
+                id="reg_key"
+                name="reg_key"
+                value="<?php echo isset($regKey) ? htmlspecialchars($regKey) : ''; ?>"
+                required
+            >
+
+            <button type="submit" class="btn btn-primary">Create Master Admin</button>
+        </form>
     </div>
-<?php else: ?>
-    <?php if (!empty($errors)): ?>
-        <div class="error">
-            <strong>Errors:</strong>
-            <ul>
-                <?php foreach ($errors as $e): ?>
-                    <li><?= htmlspecialchars($e) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    <?php endif; ?>
-
-    <?php if (usersDbExists() && !$success): ?>
-        <div class="error">
-            Setup cannot be run because user database already exists.<br />
-            If you want to reset, delete <code><?= htmlspecialchars($usersDbFile) ?></code>.
-        </div>
-    <?php else: ?>
-
-    <form method="POST" action="">
-        <label for="reg_key">Registration Key</label>
-        <input type="text" name="reg_key" id="reg_key" required autofocus />
-
-        <label for="username">Master Admin Username</label>
-        <input type="text" name="username" id="username" required />
-
-        <label for="password">Master Admin Password</label>
-        <input type="password" name="password" id="password" required />
-
-        <label for="password_confirm">Confirm Password</label>
-        <input type="password" name="password_confirm" id="password_confirm" required />
-
-        <button type="submit">Create Master Admin</button>
-    </form>
-
-    <p><em>Test registration key: <code>TEST-KEY-12345-ABCDE</code></em></p>
-
-    <?php endif; ?>
-<?php endif; ?>
-
 </body>
 </html>

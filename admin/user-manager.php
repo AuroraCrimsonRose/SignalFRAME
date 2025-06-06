@@ -5,334 +5,286 @@
  * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
  */
 
-session_start();
-
-if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
-    header('Location: login.php');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user'])) {
+    header('Location: /admin/login.php');
     exit;
 }
 
-$usersDbFile = __DIR__ . '/../config/users.sqlite';
-$stationsPath = __DIR__ . '/../stations';
-
-try {
-    $pdo = new PDO('sqlite:' . $usersDbFile);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    $stmt = $pdo->query("SELECT id, username, role, station_id, created_at FROM users ORDER BY username ASC");
-    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (Exception $e) {
-    die("Database error: " . htmlspecialchars($e->getMessage()));
-}
-
-$stations = array_map('basename', glob($stationsPath . '/*', GLOB_ONLYDIR));
-$validRoles = ['dj', 'webmaster', 'station_manager', 'admin'];
+// Use the new helpers under engine/
+require_once __DIR__ . '/../engine/db.php';
+require_once __DIR__ . '/../engine/logger.php';
+$pdo = getDbConnection();
 
 $errors = [];
-$success = null;
+$flash  = '';
 
-// Handle create user form submission (modal)
+// Handle "Create New User" form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $passwordConfirm = $_POST['password_confirm'] ?? '';
-    $role = $_POST['role'] ?? 'dj';
-    $stationId = $_POST['station_id'] ?? null;
+    $username = trim($_POST['new_username'] ?? '');
+    $email    = trim($_POST['new_email'] ?? '');
+    $password = $_POST['new_password'] ?? '';
+    $role     = $_POST['new_role'] ?? 'user';
 
-    // Validation
-    if (!preg_match('/^[a-zA-Z0-9_\-]{3,20}$/', $username)) {
-        $errors[] = "Username must be 3-20 characters, alphanumeric, underscore or dash.";
+    // Basic validation
+    if ($username === '') {
+        $errors[] = "Username is required.";
+    }
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "A valid email is required.";
     }
     if (strlen($password) < 8) {
         $errors[] = "Password must be at least 8 characters.";
     }
-    if ($password !== $passwordConfirm) {
-        $errors[] = "Passwords do not match.";
-    }
-    if (!in_array($role, $validRoles, true)) {
-        $errors[] = "Invalid role selected.";
-    }
-    if ($role !== 'admin') {
-        if (!in_array($stationId, $stations, true)) {
-            $errors[] = "Invalid or missing station for role $role.";
+
+    // Check for existing username/email
+    if (empty($errors)) {
+        $checkStmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $checkStmt->execute([$username, $email]);
+        if ($checkStmt->fetch()) {
+            $errors[] = "Username or email already taken.";
         }
-    } else {
-        $stationId = null; // admins have no station
     }
 
     if (empty($errors)) {
-        // Check username unique
-        $stmtCheck = $pdo->prepare('SELECT COUNT(*) FROM users WHERE username = ?');
-        $stmtCheck->execute([$username]);
-        if ($stmtCheck->fetchColumn() > 0) {
-            $errors[] = "Username already exists.";
-        } else {
-            // Insert user
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $stmtInsert = $pdo->prepare('INSERT INTO users (username, password_hash, role, station_id) VALUES (?, ?, ?, ?)');
-            $stmtInsert->execute([$username, $hash, $role, $stationId]);
-            $success = "User <strong>" . htmlspecialchars($username) . "</strong> created successfully.";
-            // Refresh users list after insert
-            $stmt = $pdo->query("SELECT id, username, role, station_id, created_at FROM users ORDER BY username ASC");
-            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        }
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $insert = $pdo->prepare("
+            INSERT INTO users (username, email, password_hash, role)
+            VALUES (:u, :e, :ph, :r)
+        ");
+        $insert->execute([
+            ':u'  => $username,
+            ':e'  => $email,
+            ':ph' => $hashed,
+            ':r'  => $role
+        ]);
+
+        // Get the new user's ID
+        $newUserId = (int)$pdo->lastInsertId();
+
+        // Log creation without storing the password
+        logEvent(
+            $pdo,
+            $_SESSION['user']['id'],
+            'info',
+            "Created user '{$username}' (ID {$newUserId}, Role {$role})."
+        );
+
+        $_SESSION['flash'] = "User '{$username}' created.";
+        header('Location: /admin/user-manager.php');
+        exit;
     }
 }
 
+// Handle "Delete User" action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
+    $delUserId = (int) ($_POST['delete_id'] ?? 0);
+    if ($delUserId > 0) {
+        // Fetch username before deleting
+        $stmtFetch = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+        $stmtFetch->execute([$delUserId]);
+        $row = $stmtFetch->fetch(PDO::FETCH_ASSOC);
+        $deletedUsername = $row['username'] ?? '(unknown)';
+
+        $delete = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $delete->execute([$delUserId]);
+
+        // Log deletion
+        logEvent(
+            $pdo,
+            $_SESSION['user']['id'],
+            'warning',
+            "Deleted user '{$deletedUsername}' (ID {$delUserId})."
+        );
+
+        $_SESSION['flash'] = "User deleted.";
+        header('Location: /admin/user-manager.php');
+        exit;
+    }
+}
+
+// Fetch all users
+$usersStmt = $pdo->query("
+    SELECT id, username, email, role, station_id, created_at
+    FROM users
+    ORDER BY created_at DESC
+");
+$allUsers = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch list of stations (if you want to allow assigning a station)
+$stations = [];
+try {
+    $stationDirs = array_filter(scandir(__DIR__ . '/../stations'), function($d) {
+        return $d !== '.' && $d !== '..' && is_dir(__DIR__ . "/../stations/$d");
+    });
+    foreach ($stationDirs as $slug) {
+        // Attempt to read station display name from config.json
+        $cfgPath = __DIR__ . "/../stations/$slug/config.json";
+        if (file_exists($cfgPath)) {
+            $data = json_decode(file_get_contents($cfgPath), true);
+            $stations[] = ['slug' => $slug, 'name' => $data['display_name'] ?? $slug];
+        }
+    }
+} catch (Exception $e) {
+    // If /stations/ isn’t readable, just leave stations empty
+}
+
+$pageTitle = 'User Manager';
+ob_start();
 ?>
+<div class="container" style="max-width: 1000px; margin: 2rem auto;">
+    <?php if (!empty($_SESSION['flash'])): ?>
+        <div class="alert alert-success" style="margin-bottom: 1rem;">
+            <?= htmlspecialchars($_SESSION['flash']) ?>
+        </div>
+        <?php unset($_SESSION['flash']); ?>
+    <?php endif; ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>User Manager - SignalFrame Admin</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 2rem auto;
-    padding: 1rem;
-    background: #111;
-    color: #eee;
-  }
-  h1 {
-    margin-bottom: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  a.button-primary {
-    background-color: #4caf50;
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  a.button-primary:hover {
-    background-color: #45a049;
-  }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-  }
-  th, td {
-    border: 1px solid #444;
-    padding: 0.6rem 1rem;
-    text-align: left;
-  }
-  th {
-    background: #222;
-  }
-  tr:nth-child(even) {
-    background: #1a1a1a;
-  }
-  a.button {
-    display: inline-block;
-    padding: 0.3rem 0.8rem;
-    background: #444;
-    color: #eee;
-    text-decoration: none;
-    border-radius: 4px;
-    margin-right: 0.3rem;
-    font-size: 0.9rem;
-  }
-  a.button:hover {
-    background: #666;
-  }
-  .flash-message {
-    background-color: #4caf50;
-    color: white;
-    padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-  }
-  .error-message {
-    background-color: #f44336;
-    color: white;
-    padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-  }
+    <?php if (!empty($errors)): ?>
+        <div class="alert alert-error" style="margin-bottom: 1rem;">
+            <ul style="margin: 0; padding-left: 1.2rem;">
+                <?php foreach ($errors as $err): ?>
+                    <li><?= htmlspecialchars($err) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
 
-  /* Modal Styles */
-  #createUserModal {
-    display: none;
-    position: fixed;
-    z-index: 9999;
-    left: 0; top: 0;
-    width: 100%; height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.8);
-  }
-  #createUserModal .modal-content {
-    background-color: #222;
-    margin: 5% auto;
-    padding: 2rem;
-    border-radius: 8px;
-    max-width: 480px;
-    color: #eee;
-    position: relative;
-  }
-  #createUserModal .close-btn {
-    position: absolute;
-    top: 10px; right: 15px;
-    font-size: 28px;
-    font-weight: bold;
-    color: #fff;
-    cursor: pointer;
-  }
-  #createUserModal label {
-    display: block;
-    margin-top: 1rem;
-    font-weight: bold;
-  }
-  #createUserModal input[type=text],
-  #createUserModal input[type=password],
-  #createUserModal select {
-    width: 100%;
-    padding: 0.5rem;
-    font-size: 1rem;
-  }
-  #createUserModal button[type=submit] {
-    margin-top: 1.5rem;
-    padding: 0.75rem 1.5rem;
-    font-size: 1rem;
-    cursor: pointer;
-    background-color: #4caf50;
-    border: none;
-    color: #fff;
-    border-radius: 4px;
-  }
-  #createUserModal button[type=submit]:hover {
-    background-color: #45a049;
-  }
-</style>
-<script>
-  function openCreateUserModal() {
-    document.getElementById('createUserModal').style.display = 'block';
-  }
-  function closeCreateUserModal() {
-    document.getElementById('createUserModal').style.display = 'none';
-  }
-  window.onclick = function(event) {
-    const modal = document.getElementById('createUserModal');
-    if (event.target === modal) {
-      closeCreateUserModal();
-    }
-  };
-  function onRoleChange() {
-    const role = document.getElementById('role').value;
-    const stationSelect = document.getElementById('station_id');
-    if (role === 'admin') {
-      stationSelect.disabled = true;
-      stationSelect.value = '';
-      stationSelect.required = false;
-    } else {
-      stationSelect.disabled = false;
-      stationSelect.required = true;
-    }
-  }
-</script>
-</head>
-<body>
+    <h2 style="margin-bottom: 1rem;">User Manager</h2>
 
-<h1>
-  User Manager
-  <a class="button-primary" onclick="openCreateUserModal()">+ Create New User</a>
-</h1>
+    <!-- Create New User Form -->
+    <div class="form-card" style="background: #1e1e1e; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+        <form method="POST" action="/admin/user-manager.php" style="display: grid; gap: 1rem;">
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label for="new_username" style="display: block; margin-bottom: 0.25rem; color: #ccc;">Username</label>
+                    <input
+                        type="text"
+                        id="new_username"
+                        name="new_username"
+                        required
+                        style="width: 100%; padding: 0.5rem; background: #2c2c2c; border: 1px solid #444; border-radius: 4px; color: #fff;"
+                    >
+                </div>
+                <div style="flex: 1;">
+                    <label for="new_email" style="display: block; margin-bottom: 0.25rem; color: #ccc;">Email</label>
+                    <input
+                        type="email"
+                        id="new_email"
+                        name="new_email"
+                        required
+                        style="width: 100%; padding: 0.5rem; background: #2c2c2c; border: 1px solid #444; border-radius: 4px; color: #fff;"
+                    >
+                </div>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label for="new_password" style="display: block; margin-bottom: 0.25rem; color: #ccc;">Password</label>
+                    <input
+                        type="password"
+                        id="new_password"
+                        name="new_password"
+                        minlength="8"
+                        placeholder="••••••••"
+                        required
+                        style="width: 100%; padding: 0.5rem; background: #2c2c2c; border: 1px solid #444; border-radius: 4px; color: #fff;"
+                    >
+                </div>
+                <div style="flex: 1;">
+                    <label for="new_role" style="display: block; margin-bottom: 0.25rem; color: #ccc;">Role</label>
+                    <select
+                        id="new_role"
+                        name="new_role"
+                        style="width: 100%; padding: 0.5rem; background: #2c2c2c; border: 1px solid #444; border-radius: 4px; color: #fff;"
+                    >
+                        <option value="dj">DJ</option>
+                        <option value="webmaster">Webmaster</option>
+                        <option value="station_manager">Station Manager</option>
+                        <option value="admin">Admin</option>
+                        <option value="user" selected>User</option>
+                    </select>
+                </div>
+            </div>
+            <button
+                type="submit"
+                name="create_user"
+                class="btn btn-primary"
+                style="padding: 0.6rem 1.2rem; background: #007bff; border: none; border-radius: 4px; color: #fff;"
+            >
+                Create User
+            </button>
+        </form>
+    </div>
 
-<?php if ($success): ?>
-  <div class="flash-message"><?= $success ?></div>
-<?php endif; ?>
-
-<?php if ($errors): ?>
-  <div class="error-message">
-    <ul>
-      <?php foreach ($errors as $error): ?>
-        <li><?= htmlspecialchars($error) ?></li>
-      <?php endforeach; ?>
-    </ul>
-  </div>
-<?php endif; ?>
-
-<table>
-  <thead>
-    <tr>
-      <th>Username</th>
-      <th>Role</th>
-      <th>Station</th>
-      <th>Created At</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-  <?php if (empty($users)): ?>
-    <tr><td colspan="5"><em>No users found.</em></td></tr>
-  <?php else: ?>
-    <?php foreach ($users as $user): ?>
-      <tr>
-        <td><?= htmlspecialchars($user['username']) ?></td>
-        <td><?= htmlspecialchars(ucwords(str_replace('_', ' ', $user['role']))) ?></td>
-        <td><?= htmlspecialchars($user['station_id'] ?? '-') ?></td>
-        <td><?= htmlspecialchars($user['created_at']) ?></td>
-        <td>
-          <a class="button" href="user-edit.php?id=<?= (int)$user['id'] ?>">Edit</a>
-          <?php if ($user['id'] !== $_SESSION['user']['id']): ?>
-            <a class="button" href="user-delete.php?id=<?= (int)$user['id'] ?>" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
-          <?php else: ?>
-            <em>(You)</em>
-          <?php endif; ?>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-  <?php endif; ?>
-  </tbody>
-</table>
-
-<!-- Create User Modal -->
-<div id="createUserModal">
-  <div class="modal-content">
-    <span class="close-btn" onclick="closeCreateUserModal()">&times;</span>
-    <h2>Create New User</h2>
-    <form method="POST" action="" onsubmit="return confirm('Create this user?');">
-      <input type="hidden" name="create_user" value="1" />
-
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" required autofocus />
-
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" required />
-
-      <label for="password_confirm">Confirm Password</label>
-      <input type="password" id="password_confirm" name="password_confirm" required />
-
-      <label for="role">Role</label>
-      <select id="role" name="role" onchange="onRoleChange()" required>
-        <?php foreach ($validRoles as $role): ?>
-          <option value="<?= $role ?>"><?= ucwords(str_replace('_', ' ', $role)) ?></option>
-        <?php endforeach; ?>
-      </select>
-
-      <label for="station_id">Assigned Station</label>
-      <select id="station_id" name="station_id" required>
-        <option value="">-- Select Station --</option>
-        <?php foreach ($stations as $station): ?>
-          <option value="<?= htmlspecialchars($station) ?>"><?= htmlspecialchars($station) ?></option>
-        <?php endforeach; ?>
-      </select>
-
-      <button type="submit">Create User</button>
-    </form>
-  </div>
+    <!-- User List Table -->
+    <div class="table-responsive" style="background: #2a2a2a; padding: 1rem; border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; color: #fff;">
+            <thead>
+                <tr style="border-bottom: 1px solid #444;">
+                    <th style="padding: 0.75rem; text-align: left;">Avatar</th>
+                    <th style="padding: 0.75rem; text-align: left;">Username</th>
+                    <th style="padding: 0.75rem; text-align: left;">Email</th>
+                    <th style="padding: 0.75rem; text-align: left;">Role</th>
+                    <th style="padding: 0.75rem; text-align: left;">Station</th>
+                    <th style="padding: 0.75rem; text-align: left;">Created At</th>
+                    <th style="padding: 0.75rem; text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($allUsers)): ?>
+                    <tr>
+                        <td colspan="7" style="padding: 1rem; text-align: center; color: #999;">
+                            No users found.
+                        </td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($allUsers as $u): ?>
+                        <?php
+                            $hash = md5(strtolower(trim($u['email'])));
+                            // Find station display name if assigned
+                            $stationName = '';
+                            if ($u['station_id']) {
+                                foreach ($stations as $s) {
+                                    if ($s['slug'] === $u['station_id']) {
+                                        $stationName = $s['name'];
+                                        break;
+                                    }
+                                }
+                            }
+                        ?>
+                        <tr style="border-bottom: 1px solid #333;">
+                            <td style="padding: 0.75rem;">
+                                <img
+                                    src="https://www.gravatar.com/avatar/<?= $hash ?>?s=32&d=identicon"
+                                    alt="Avatar"
+                                    style="border-radius: 50%;"
+                                >
+                            </td>
+                            <td style="padding: 0.75rem;"><?= htmlspecialchars($u['username']) ?></td>
+                            <td style="padding: 0.75rem;"><?= htmlspecialchars($u['email']) ?></td>
+                            <td style="padding: 0.75rem;"><?= htmlspecialchars($u['role']) ?></td>
+                            <td style="padding: 0.75rem;"><?= htmlspecialchars($stationName) ?></td>
+                            <td style="padding: 0.75rem;"><?= htmlspecialchars($u['created_at']) ?></td>
+                            <td style="padding: 0.75rem; text-align: center;">
+                                <form method="POST" action="/admin/user-manager.php"
+                                      onsubmit="return confirm('Delete this user?');"
+                                      style="display: inline;">
+                                    <input type="hidden" name="delete_id" value="<?= (int)$u['id'] ?>">
+                                    <button type="submit" name="delete_user" class="btn btn-danger"
+                                            style="padding: 0.3rem 0.6rem; background: #dc3545; border: none; border-radius: 4px; color: #fff;">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
-
-<script>
-  onRoleChange();
-</script>
-
-</body>
-</html>
+<?php
+$pageContent = ob_get_clean();
+include __DIR__ . '/_template.php';

@@ -5,169 +5,181 @@
  * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
  */
 
-session_start();
-
-// Require user to be logged in and admin
-if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
-    header('Location: login.php');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (!isset($_SESSION['user'])) {
+    header('Location: /admin/login.php');
     exit;
 }
 
-$usersDbFile = __DIR__ . '/../config/users.sqlite';
+require_once __DIR__ . '/../engine/db.php';
+require_once __DIR__ . '/../engine/logger.php';
+$pdo = getDbConnection();
 
-try {
-    $pdo = new PDO('sqlite:' . $usersDbFile);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+// Handle “Create New Token” form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_token'])) {
+    $userIdForToken = (int) ($_POST['user_id'] ?? 0);
+    if ($userIdForToken > 0) {
+        // Generate a random API token (e.g. 40-character hex)
+        $newToken = bin2hex(random_bytes(20));
 
-    // Fetch all users for user selector
-    $stmtUsers = $pdo->query("SELECT id, username FROM users ORDER BY username ASC");
-    $allUsers = $stmtUsers->fetchAll(PDO::FETCH_ASSOC);
+        $insert = $pdo->prepare("
+            INSERT INTO api_tokens (user_id, token)
+            VALUES (:uid, :tok)
+        ");
+        $insert->execute([
+            ':uid' => $userIdForToken,
+            ':tok' => $newToken,
+        ]);
 
-    // Handle new token creation
-    $message = '';
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_token_user'])) {
-        $userId = (int)$_POST['create_token_user'];
-        if ($userId === 0) {
-            $message = "Please select a valid user.";
-        } else {
-            $token = bin2hex(random_bytes(32));
-            $stmt = $pdo->prepare("INSERT INTO api_tokens (user_id, token) VALUES (?, ?)");
-            $stmt->execute([$userId, $token]);
-            $message = "New token generated for user ID $userId.";
-        }
+        // Fetch username for logging
+        $stmtUser = $pdo->prepare("SELECT username FROM users WHERE id = ?");
+        $stmtUser->execute([$userIdForToken]);
+        $userRow = $stmtUser->fetch(PDO::FETCH_ASSOC);
+        $username = $userRow['username'] ?? '(unknown)';
+
+        // Log creation without revealing the token itself
+        logEvent(
+            $pdo,
+            $_SESSION['user']['id'],
+            'info',
+            "Generated new API token for user '{$username}' (ID {$userIdForToken})."
+        );
+
+        $_SESSION['flash'] = "New API token generated.";
+        header('Location: /admin/token-manager.php');
+        exit;
     }
-
-    // Handle token revocation
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoke_token_id'])) {
-        $tokenId = (int)$_POST['revoke_token_id'];
-        $stmt = $pdo->prepare("UPDATE api_tokens SET revoked = 1 WHERE id = ?");
-        $stmt->execute([$tokenId]);
-        $message = "Token ID $tokenId revoked.";
-    }
-
-    // Fetch users and their tokens
-    $stmt = $pdo->query("
-        SELECT users.id as user_id, users.username, users.role, 
-               api_tokens.id as token_id, api_tokens.token, api_tokens.created_at, 
-               api_tokens.last_used_at, api_tokens.usage_count, api_tokens.revoked
-        FROM users
-        LEFT JOIN api_tokens ON users.id = api_tokens.user_id
-        ORDER BY users.username, api_tokens.created_at DESC
-    ");
-
-    $data = [];
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $uid = $row['user_id'];
-        if (!isset($data[$uid])) {
-            $data[$uid] = [
-                'username' => $row['username'],
-                'role' => $row['role'],
-                'tokens' => [],
-            ];
-        }
-        if ($row['token_id']) {
-            $data[$uid]['tokens'][] = [
-                'id' => $row['token_id'],
-                'token' => $row['token'],
-                'created_at' => $row['created_at'],
-                'last_used_at' => $row['last_used_at'],
-                'usage_count' => $row['usage_count'],
-                'revoked' => $row['revoked'],
-            ];
-        }
-    }
-} catch (Exception $e) {
-    die("Database error: " . htmlspecialchars($e->getMessage()));
 }
 
+// Handle “Revoke” action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['revoke_token'])) {
+    $tokenId = (int) ($_POST['token_id'] ?? 0);
+    if ($tokenId > 0) {
+        // Fetch user_id and username before deletion
+        $stmtFetch = $pdo->prepare("
+            SELECT t.user_id, u.username
+            FROM api_tokens AS t
+            LEFT JOIN users AS u ON t.user_id = u.id
+            WHERE t.id = ?
+        ");
+        $stmtFetch->execute([$tokenId]);
+        $row = $stmtFetch->fetch(PDO::FETCH_ASSOC);
+
+        $del = $pdo->prepare("DELETE FROM api_tokens WHERE id = ?");
+        $del->execute([$tokenId]);
+
+        $userId = $row['user_id'] ?? 0;
+        $username = $row['username'] ?? '(unknown)';
+
+        // Log revocation without showing the token
+        logEvent(
+            $pdo,
+            $_SESSION['user']['id'],
+            'warning',
+            "Revoked API token (ID {$tokenId}) for user '{$username}' (ID {$userId})."
+        );
+
+        $_SESSION['flash'] = "API token revoked.";
+        header('Location: /admin/token-manager.php');
+        exit;
+    }
+}
+
+// Fetch all tokens and their associated usernames
+$tokensStmt = $pdo->query("
+    SELECT t.id, t.user_id, t.token, t.created_at, u.username
+    FROM api_tokens AS t
+    LEFT JOIN users AS u ON t.user_id = u.id
+    ORDER BY t.created_at DESC
+");
+$allTokens = $tokensStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch all users for the “Create New Token” dropdown
+$usersStmt = $pdo->query("SELECT id, username, email FROM users ORDER BY username ASC");
+$allUsers = $usersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Grab and clear any flash message
+$flash = $_SESSION['flash'] ?? '';
+unset($_SESSION['flash']);
+
+$pageTitle = 'Token Manager';
+ob_start();
 ?>
+<div class="container" style="max-width: 800px; margin: 2rem auto;">
+    <?php if ($flash): ?>
+        <div class="alert alert-success" style="margin-bottom: 1rem;">
+            <?= htmlspecialchars($flash) ?>
+        </div>
+    <?php endif; ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SignalFrame Token Manager</title>
-<style>
-    body { font-family: Arial, sans-serif; max-width: 900px; margin: 2rem auto; padding: 1rem; background: #111; color: #eee; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 2rem; }
-    th, td { border: 1px solid #444; padding: 0.5rem 1rem; }
-    th { background: #222; }
-    tr:nth-child(even) { background: #1a1a1a; }
-    button { padding: 0.25rem 0.75rem; cursor: pointer; }
-    .revoked { color: #f55; font-weight: bold; }
-    .message { background: #282; padding: 1rem; margin-bottom: 1rem; border-radius: 5px; }
-    form.inline { display: inline; }
-    label, select { font-weight: bold; }
-</style>
-</head>
-<body>
+    <h2 style="margin-bottom: 1rem;">API Token Manager</h2>
 
-<h1>Token Manager</h1>
-
-<?php if (!empty($message)): ?>
-    <div class="message"><?= htmlspecialchars($message) ?></div>
-<?php endif; ?>
-
-<section>
-    <h2>Generate New Token</h2>
-    <form method="POST" onsubmit="return confirm('Generate new token for selected user?');">
-        <label for="create_token_user">Select User:</label>
-        <select name="create_token_user" id="create_token_user" required>
-            <option value="">-- Select a User --</option>
-            <?php foreach ($allUsers as $user): ?>
-                <option value="<?= (int)$user['id'] ?>"><?= htmlspecialchars($user['username']) ?></option>
-            <?php endforeach; ?>
-        </select>
-        <button type="submit">Generate New Token</button>
-    </form>
-</section>
-
-<?php foreach ($data as $userId => $user): ?>
-    <section>
-        <h2><?= htmlspecialchars($user['username']) ?> (<?= htmlspecialchars($user['role']) ?>)</h2>
-
-        <?php if (count($user['tokens']) === 0): ?>
-            <p><em>No tokens yet.</em></p>
-        <?php else: ?>
-            <table>
-              <thead>
-                <tr>
-                  <th>Token</th>
-                  <th>Owner</th>
-                  <th>Created At</th>
-                  <th>Last Used</th>
-                  <th>Usage Count</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($user['tokens'] as $token): ?>
-                  <tr>
-                    <td><code><?= htmlspecialchars($token['token']) ?></code></td>
-                    <td><?= htmlspecialchars($user['username']) ?></td> <!-- Added owner column -->
-                    <td><?= htmlspecialchars($token['created_at']) ?></td>
-                    <td><?= htmlspecialchars($token['last_used_at'] ?? '-') ?></td>
-                    <td><?= (int)$token['usage_count'] ?></td>
-                    <td><?= $token['revoked'] ? '<span class="revoked">Revoked</span>' : 'Active' ?></td>
-                    <td>
-                      <?php if (!$token['revoked']): ?>
-                        <form method="POST" class="inline" onsubmit="return confirm('Revoke this token?');">
-                          <input type="hidden" name="revoke_token_id" value="<?= (int)$token['id'] ?>" />
-                          <button type="submit">Revoke</button>
-                        </form>
-                      <?php else: ?>
-                        <em>None</em>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
+    <!-- Create New Token Form -->
+    <div class="form-card" style="background: #1e1e1e; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+        <form method="POST" action="/admin/token-manager.php" style="display: flex; align-items: center; gap: 1rem;">
+            <label for="user_id" style="color: #ccc;">Select User</label>
+            <select name="user_id" id="user_id" required style="padding: 0.5rem; background: #2c2c2c; border: 1px solid #444; border-radius: 4px; color: #fff;">
+                <option value="">— Choose User —</option>
+                <?php foreach ($allUsers as $u): ?>
+                    <option value="<?= (int)$u['id'] ?>">
+                        <?= htmlspecialchars($u['username']) ?> (<?= htmlspecialchars($u['email']) ?>)
+                    </option>
                 <?php endforeach; ?>
-              </tbody>
-            </table>
-        <?php endif; ?>
-    </section>
-<?php endforeach; ?>
+            </select>
+            <button type="submit" name="create_token" class="btn btn-primary" style="padding: 0.6rem 1.2rem; background: #007bff; border: none; border-radius: 4px; color: #fff;">
+                Generate Token
+            </button>
+        </form>
+    </div>
 
-</body>
-</html>
+    <!-- Token List -->
+    <div class="table-responsive" style="background: #2a2a2a; padding: 1rem; border-radius: 8px;">
+        <table style="width: 100%; border-collapse: collapse; color: #fff;">
+            <thead>
+                <tr style="border-bottom: 1px solid #444;">
+                    <th style="padding: 0.75rem; text-align: left;">User</th>
+                    <th style="padding: 0.75rem; text-align: left;">Token (masked)</th>
+                    <th style="padding: 0.75rem; text-align: left;">Created At</th>
+                    <th style="padding: 0.75rem; text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($allTokens)): ?>
+                    <tr>
+                        <td colspan="4" style="padding: 1rem; text-align: center; color: #999;">
+                            No tokens found.
+                        </td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($allTokens as $tok): ?>
+                        <tr style="border-bottom: 1px solid #333;">
+                            <td style="padding: 0.75rem;">
+                                <?= htmlspecialchars($tok['username'] ?: '(unknown)') ?>
+                            </td>
+                            <td style="padding: 0.75rem;">
+                                <?= substr(htmlspecialchars($tok['token']), 0, 8) . '…' ?>
+                            </td>
+                            <td style="padding: 0.75rem;">
+                                <?= htmlspecialchars($tok['created_at']) ?>
+                            </td>
+                            <td style="padding: 0.75rem; text-align: center;">
+                                <form method="POST" action="/admin/token-manager.php" onsubmit="return confirm('Revoke this token?');">
+                                    <input type="hidden" name="token_id" value="<?= (int)$tok['id'] ?>">
+                                    <button type="submit" name="revoke_token" class="btn btn-danger" style="padding: 0.3rem 0.6rem; background: #dc3545; border: none; border-radius: 4px; color: #fff;">
+                                        Revoke
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+<?php
+$pageContent = ob_get_clean();
+include __DIR__ . '/_template.php';
+?>

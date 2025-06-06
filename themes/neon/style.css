@@ -1,12 +1,12 @@
 /* ==========================================================================
-   Light Theme - style.css
+   Neon Theme - style.css
    ========================================================================== */
 
-/* CSS Variables (may be overridden by manifest-injected variables) */
+/* CSS Variables (overridden by manifest-injected variables if present) */
 :root {
-  --background: #ffffff;
-  --text: #333333;
-  --accent: #007bff;
+  --background: #000000;
+  --text: #ffffff;
+  --accent: #39ff14;
 }
 
 /* Base reset */
@@ -16,31 +16,33 @@
   box-sizing: border-box;
 }
 
-/* Page background and text */
+/* Body */
 body {
   background-color: var(--background);
   color: var(--text);
-  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Roboto', sans-serif;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Header */
 .header {
-  background-color: var(--accent);
-  color: #ffffff;
+  background-color: #111111;
+  color: var(--accent);
   padding: 1rem;
   text-align: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  box-shadow: 0 0 16px rgba(57, 255, 20, 0.7);
 }
 .header h1 {
   font-size: 2rem;
-  margin-bottom: 0.25rem;
+  text-shadow: 0 0 8px var(--accent);
 }
 .header .theme-info {
   font-size: 0.9rem;
   opacity: 0.8;
+  text-shadow: 0 0 4px var(--accent);
 }
 
 /* Main Content */
@@ -53,37 +55,44 @@ body {
   text-align: center;
 }
 
-/* Audio Widget Container */
+/* Audio Widget */
 .audio-widget {
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--accent);
+  background-color: rgba(20, 20, 20, 0.8);
+  border: 2px solid var(--accent);
   border-radius: 8px;
   padding: 1.5rem;
-  max-width: 400px;
+  max-width: 420px;
   width: 100%;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 0 12px var(--accent);
 }
 .audio-widget h2 {
   margin-bottom: 1rem;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
 }
 
 /* Play/Pause Button */
 .play-btn {
   background-color: var(--accent);
   border: none;
-  color: #fff;
+  color: var(--background);
   font-size: 1rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.8rem 1.6rem;
   border-radius: 4px;
   cursor: pointer;
   margin-top: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 8px var(--accent);
 }
 .play-btn:hover {
   opacity: 0.9;
+  box-shadow: 0 0 12px var(--accent);
 }
 
-/* Quality Selector Dropdown */
+/* Quality Selector */
 .quality-selector {
   margin-top: 1rem;
 }
@@ -91,24 +100,37 @@ body {
   padding: 0.5rem;
   border: 1px solid var(--accent);
   border-radius: 4px;
-  background: var(--background);
+  background: #111;
   color: var(--text);
   font-size: 1rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 6px var(--accent);
 }
 
-/* Now Playing Text */
+/* Now Playing */
 .now-playing {
   margin-top: 1.5rem;
   font-size: 1rem;
-  color: var(--text);
+  color: var(--accent);
+  text-shadow: 0 0 6px var(--accent);
 }
 
 /* Footer */
 .footer {
-  background-color: #f0f0f0;
-  color: #666666;
+  background-color: #111111;
+  color: #cccccc;
   text-align: center;
   padding: 1rem;
   font-size: 0.9rem;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #333;
+}
+
+/* Example visualizer placeholder */
+.visualizer-canvas {
+  margin-top: 1.5rem;
+  width: 100%;
+  height: 120px;
+  background: #111;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 8px var(--accent);
 }

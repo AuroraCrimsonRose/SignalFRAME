@@ -5,13 +5,12 @@
  * Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
  */
 
-session_start();
+session_start(); // always start session here for login
 
 $usersDbFile = __DIR__ . '/../config/users.sqlite';
 $error = '';
 
 if (isset($_SESSION['user'])) {
-    // Already logged in
     header('Location: /admin/index.php');
     exit;
 }
@@ -23,10 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($username === '' || $password === '') {
         $error = 'Please enter both username and password.';
     } elseif (!file_exists($usersDbFile)) {
-        $error = 'User database not found. Please run setup first.';
+        $error = 'User database not found. Please run setup.';
     } else {
         try {
-            error_log('Looking for DB at: ' . realpath($usersDbFile));
             $pdo = new PDO('sqlite:' . $usersDbFile);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -35,58 +33,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($user && password_verify($password, $user['password_hash'])) {
-                // Successful login
                 $_SESSION['user'] = [
                     'id' => $user['id'],
                     'username' => $user['username'],
                     'role' => $user['role'],
                     'api_token' => $user['api_token'] ?? null,
                 ];
+                file_put_contents('/tmp/sf_debug.txt', print_r($_SESSION, true));
+                
                 header('Location: /admin/index.php');
                 exit;
             } else {
                 $error = 'Invalid username or password.';
             }
         } catch (Exception $e) {
-            error_log('PDO Exception: ' . $e->getMessage());
-            $error = 'Error accessing user database.';
+            $error = 'Login error: ' . $e->getMessage();
         }
     }
 }
-
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SignalFrame Admin Login</title>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 400px; margin: 3rem auto; padding: 1rem; }
-  label { display: block; margin-top: 1rem; }
-  input[type=text], input[type=password] { width: 100%; padding: 0.5rem; font-size: 1rem; }
-  button { margin-top: 1.5rem; padding: 0.75rem 1.5rem; font-size: 1rem; }
-  .error { color: #f55; margin-top: 1rem; }
-</style>
+  <meta charset="UTF-8">
+  <title>Login - SignalFrame</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/admin/assets/admin-style.css">
+  <style>
+    .login-box {
+      max-width: 400px;
+      margin: 80px auto;
+      background-color: #1a1a1a;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .login-box h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 10px;
+      margin: 12px 0;
+      border: none;
+      border-radius: 4px;
+      background-color: #2a2a2a;
+      color: white;
+    }
+    .login-box button {
+      width: 100%;
+      padding: 10px;
+      background-color: #2a2a2a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .login-box button:hover {
+      background-color: #444;
+    }
+    .error {
+      color: #ff6b6b;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+  </style>
 </head>
 <body>
-
-<h2>SignalFrame Admin Login</h2>
-
-<?php if ($error): ?>
-  <div class="error"><?= htmlspecialchars($error) ?></div>
-<?php endif; ?>
-
-<form method="POST" action="">
-  <label for="username">Username</label>
-  <input type="text" name="username" id="username" autofocus required />
-
-  <label for="password">Password</label>
-  <input type="password" name="password" id="password" required />
-
-  <button type="submit">Log In</button>
-</form>
-
+  <div class="login-box">
+    <h2>SignalFrame Admin Login</h2>
+    <?php if ($error): ?>
+      <div class="error"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
+    <form method="POST">
+      <input type="text" name="username" placeholder="Username" autofocus required>
+      <input type="password" name="password" placeholder="Password" required>
+      <button type="submit">Log In</button>
+    </form>
+  </div>
 </body>
 </html>

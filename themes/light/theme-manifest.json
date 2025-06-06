@@ -3,12 +3,12 @@
   "id": "light",
   "version": "1.0",
   "author": "CATALYSTS LABS",
-  "description": "A clean and bright light theme with soft tones.",
+  "description": "A clean, bright theme optimized for daytime listening.",
   "type": "light",
   "colors": {
-    "background": "#fefefe",
-    "text": "#222",
-    "accent": "#e0f0ff"
+    "background": "#ffffff",
+    "text": "#333333",
+    "accent": "#007bff"
   },
   "hasVisualizer": false
 }

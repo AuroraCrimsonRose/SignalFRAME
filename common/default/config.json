@@ -1,0 +1,7 @@
+{
+  "slug":         "{{SLUG}}",
+  "display_name": "{{STATION_NAME}}",
+  "mountpoint":   "{{MOUNTPOINT}}",
+  "theme":        "{{THEME}}",
+  "enabled":      true
+}

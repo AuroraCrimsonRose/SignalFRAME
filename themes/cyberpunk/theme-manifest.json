@@ -1,0 +1,14 @@
+{
+  "name": "Cyberpunk Theme",
+  "id": "cyberpunk",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A neon‐lit Cyberpunk look—dark base with electric blue and hot pink accents.",
+  "type": "dark",
+  "colors": {
+    "background": "#0F0F16",
+    "text": "#E0E0E0",
+    "accent": "#FF00FF"
+  },
+  "hasVisualizer": true
+}

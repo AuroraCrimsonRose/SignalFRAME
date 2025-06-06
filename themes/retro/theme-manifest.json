@@ -1,0 +1,14 @@
+{
+  "name": "Retro Theme",
+  "id": "retro",
+  "version": "1.0",
+  "author": "CATALYSTS LABS",
+  "description": "A nostalgic retro-inspired theme with muted tones and pixel fonts.",
+  "type": "light",
+  "colors": {
+    "background": "#f4e8c1",
+    "text": "#4a3f35",
+    "accent": "#a35241"
+  },
+  "hasVisualizer": false
+}
