@@ -27,6 +27,7 @@ require_once __DIR__ . '/../api/getHealthChecks.php';
 require_once __DIR__ . '/../api/getLicenseData.php';
 require_once __DIR__ . '/../api/getNewUsers.php';
 require_once __DIR__ . '/../api/getDiskRamUsage.php';
+require_once __DIR__ . '/../engine/license.php';
 
 // 4) Fetch data via API calls
 $alerts        = getAlerts();

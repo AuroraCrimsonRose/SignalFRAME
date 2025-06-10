@@ -1,13 +1,13 @@
 {
-  "license_key": "SF-XXXX-XXXX-XXXX-XXXX",
-  "edition": "personal",
-  "branding": true,
-  "whmcs_integration": false,
-  "multi_user": false,
-  "external_db": false,
-  "enabled_modules": [
-    "theming",
-    "station_message",
-    "api_core"
-  ]
+    "license_key": "SF-216EE02F-F4E609FD-8571860D-A9DF88C8",
+    "edition": "personal",
+    "branding": true,
+    "whmcs_integration": false,
+    "multi_user": false,
+    "external_db": false,
+    "enabled_modules": [
+        "theming",
+        "station_message",
+        "api_core"
+    ]
 }

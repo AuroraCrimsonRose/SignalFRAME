@@ -10,3 +10,6 @@
 
 # Ignore VS Code workspace file
 /SignalFRAME.code-workspace
+config/retail-config.json
+config/license-cache.json
+config/retail-config.json

@@ -41,7 +41,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 file_put_contents('/tmp/sf_debug.txt', print_r($_SESSION, true));
                 
-                header('Location: /admin/index.php');
+                // After successful login and before redirect:
+                require_once __DIR__ . '/../engine/license.php';
+                checkAndCacheLicense();
+                header('Location: index.php');
                 exit;
             } else {
                 $error = 'Invalid username or password.';

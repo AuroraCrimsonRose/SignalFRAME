@@ -55,9 +55,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
     if (strlen($password) < 8) {
         $errors[] = "Password must be at least 8 characters long.";
     }
-    if (!in_array($regKey, $validKeys, true)) {
-        $errors[] = "Invalid registration key.";
+
+    // --- License check via API ---
+    if ($regKey !== '') {
+        $apiUrl = __DIR__ . '/../../admin/license-check.php'; // Adjust path if needed
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://catalystslabs.com/SignalFrame/admin/license-check.php'); // Use your actual URL
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode(['license_key' => $regKey]));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        $result = json_decode($response, true);
+        if (!$result || $result['status'] !== 'valid') {
+            $errors[] = $result['message'] ?? 'Invalid license key.';
+        }
     }
+    // --- End license check ---
 
     if (empty($errors)) {
         // Ensure config/ directory exists
@@ -121,6 +137,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
             ':email'    => $email,
             ':pw'       => $passwordHash,
         ]);
+
+        // --- ADD THIS BLOCK: Save license key to retail-config.json ---
+        $retailConfigPath = __DIR__ . '/../config/retail-config.json';
+        $retailConfig = [];
+        if (file_exists($retailConfigPath)) {
+            $retailConfig = json_decode(file_get_contents($retailConfigPath), true);
+        }
+        $retailConfig['license_key'] = $regKey;
+        file_put_contents($retailConfigPath, json_encode($retailConfig, JSON_PRETTY_PRINT));
+        // --- END BLOCK ---
 
         $_SESSION['flash'] = "Master admin created. You can now log in.";
         header('Location: /admin/login.php');
