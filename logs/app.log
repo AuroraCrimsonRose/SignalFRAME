@@ -1,2 +1,29 @@
 [2025-06-06 07:52:56] [WARNING] [User: 1] Deleted station '1'.
 [2025-06-06 07:52:59] [WARNING] [User: 1] Permanently deleted station '1'.
+[2025-06-07 03:38:35] [INFO] [User: 1] Created station '1' (Display: '1').
+[2025-06-07 03:38:52] [WARNING] [User: 1] Deleted station '1'.
+[2025-06-07 03:39:01] [INFO] [User: 1] Restored station '1' from disabled.
+[2025-06-07 03:39:03] [WARNING] [User: 1] Deleted station '1'.
+[2025-06-07 03:39:05] [WARNING] [User: 1] Permanently deleted station '1'.
+[2025-06-10 08:48:07] [INFO] [User: 1] Created station 'test' (Display: 'Test Station').
+[2025-06-10 08:52:37] [INFO] [User: 1] Updated station 'manager' settings.
+[2025-06-10 08:53:27] [INFO] [User: 1] Enabled station 'test'.
+[2025-06-10 09:22:41] [INFO] [User: 1] Updated station 'manager' settings.
+[2025-06-10 09:22:45] [INFO] [User: 1] Updated station 'manager' settings.
+[2025-06-10 09:25:13] [INFO] [User: 1] Updated station 'manager' settings.
+[2025-06-10 09:43:42] [INFO] [User: 1] Updated station 'manager' settings.
+[2025-06-10 09:46:27] [INFO] [User: 1] Enabled station 'test'.
+[2025-06-10 09:46:28] [INFO] [User: 1] Disabled station 'test'.
+[2025-06-10 09:46:29] [INFO] [User: 1] Enabled station 'test'.
+[2025-06-10 09:46:30] [INFO] [User: 1] Disabled station 'test'.
+[2025-06-10 09:46:31] [INFO] [User: 1] Enabled station 'test'.
+[2025-06-10 09:46:33] [INFO] [User: 1] Disabled station 'test'.
+[2025-06-10 09:46:46] [INFO] [User: 1] Updated station 'manager' settings.
+[2025-06-10 09:48:56] [INFO] [User: 1] Disabled station 'test'.
+[2025-06-10 09:49:16] [INFO] [User: 1] Updated station 'test' settings.
+[2025-06-10 09:49:18] [INFO] [User: 1] Updated station 'test' settings.
+[2025-06-10 09:49:19] [INFO] [User: 1] Updated station 'test' settings.
+[2025-06-10 10:00:17] [WARNING] [User: 1] Deleted station 'test'.
+[2025-06-10 10:00:26] [INFO] [User: 1] Created station 'test' (Display: 'Test Station').
+[2025-06-10 10:02:01] [WARNING] [User: 1] Deleted station 'test'.
+[2025-06-10 10:02:06] [INFO] [User: 1] Created station 'test' (Display: 'Test Station').

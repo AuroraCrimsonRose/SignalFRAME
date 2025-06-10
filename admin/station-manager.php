@@ -153,6 +153,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_station'])) {
         // Rename _station-template.php → index.php (no placeholders to replace)
         rename("$newStationPath/_station-template.php", "$newStationPath/index.php");
 
+        // Copy manager template to stations/{slug}/manager
+        $managerTemplate = __DIR__ . '/../common/manager-template';
+        $managerTarget   = "$newStationPath/manager";
+        if (is_dir($managerTemplate)) {
+            recursiveCopy($managerTemplate, $managerTarget);
+        }
+
         // ————————
         // LOGGING: only now that $slug and $dispName are set and folder is created
         logEvent(
@@ -213,6 +220,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_station'])) {
         writeStationConfig($slug, $cfg);
         $status = $cfg['enabled'] ? 'enabled' : 'disabled';
 
+        $managerTemplate = __DIR__ . '/../common/manager-template';
+        $managerTarget   = "$newStationPath/manager";
+        if (is_dir($managerTemplate)) {
+            mkdir($managerTarget, 0755, true);
+            $dir = opendir($managerTemplate);
+            while (($file = readdir($dir)) !== false) {
+                if ($file === '.' || $file === '..') continue;
+                copy("$managerTemplate/$file", "$managerTarget/$file");
+            }
+            closedir($dir);
+        } else {
+            logEvent(
+                $pdo,
+                $_SESSION['user']['id'],
+                'error',
+                "Failed to copy manager template to '$managerTarget' for station '$slug'."
+            );
+        }
         // LOGGING: record the toggle action
         logEvent(
             $pdo,
