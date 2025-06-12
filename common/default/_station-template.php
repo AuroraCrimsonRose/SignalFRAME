@@ -94,9 +94,9 @@ $enabled     = $config['enabled']      ?? false;
 
         <!-- Audio element (hidden native controls) -->
         <audio id="audio-player">
-          <source id="source-low" src="<?php echo htmlspecialchars($mountpoint); ?>?quality=low" type="audio/mpeg" />
-          <source id="source-medium" src="<?php echo htmlspecialchars($mountpoint); ?>?quality=medium" type="audio/mpeg" />
-          <source id="source-high" src="<?php echo htmlspecialchars($mountpoint); ?>?quality=high" type="audio/mpeg" />
+          <source id="source-low" src="/livelow" type="audio/mpeg" />
+          <source id="source-medium" src="/livemedium" type="audio/mpeg" />
+          <source id="source-high" src="/livehigh" type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>
 
@@ -142,7 +142,9 @@ $enabled     = $config['enabled']      ?? false;
       }
 
       function updateAudioSource(q) {
-        const srcUrl = `${mount}?quality=${q}`;
+        // Remove any trailing slash from mountpoint
+        let base = mount.replace(/\/$/, '');
+        let srcUrl = base + q; // e.g., "/live" + "low" = "/livelow"
         audio.src = srcUrl;
         if (!audio.paused) {
           audio.play().catch(() => {});

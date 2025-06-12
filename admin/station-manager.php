@@ -15,6 +15,8 @@ if (!isset($_SESSION['user'])) {
 
 require_once __DIR__ . '/../engine/db.php';
 require_once __DIR__ . '/../engine/logger.php';
+require_once __DIR__ . '/../api/setMountPoint.php';
+
 $pdo            = getDbConnection();
 $stationsDir    = __DIR__ . '/../stations';
 $commonDefault  = __DIR__ . '/../common/default';
@@ -160,6 +162,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_station'])) {
             recursiveCopy($managerTemplate, $managerTarget);
         }
 
+        // Add mountpoints and log the result
+        $addedMounts = addIcecastMounts($mountpoint);
+        $liqAdded = addLiquidsoapOutput($slug, $mountpoint);
+
+        if (!empty($addedMounts)) {
+            logEvent($pdo, $_SESSION['user']['id'], 'info', "Added Icecast mountpoints for station '$slug': " . implode(', ', $addedMounts));
+        }
+        if ($liqAdded) {
+            logEvent($pdo, $_SESSION['user']['id'], 'info', "Added Liquidsoap output for station '$slug'.");
+        }
+
+        // Restart both services to apply changes
+        shell_exec('docker compose restart icecast');
+        shell_exec('docker compose restart liquidsoap');
+        logEvent($pdo, $_SESSION['user']['id'], 'info', "Restarted Icecast and Liquidsoap after station change.");
+
         // ————————
         // LOGGING: only now that $slug and $dispName are set and folder is created
         logEvent(
@@ -185,11 +203,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_station'])) {
     if ($slug === '' || !is_dir($stationPath)) {
         $errors[] = "Invalid station slug.";
     } else {
+        $cfg = readStationConfig($slug);
+        $mountpoint = $cfg['mountpoint'] ?? '';
         $timestamp    = date('Ymd_His');
         $disabledName = "{$slug}_{$timestamp}";
         $targetPath   = "$disabledDir/$disabledName";
 
         if (rename($stationPath, $targetPath)) {
+            // Remove mountpoints and log the result
+            $removedMounts = removeIcecastMounts($mountpoint);
+            $liqRemoved = removeLiquidsoapOutput($slug);
+
+            if (!empty($removedMounts)) {
+                logEvent($pdo, $_SESSION['user']['id'], 'info', "Removed Icecast mountpoints for station '$slug': " . implode(', ', $removedMounts));
+            }
+            if ($liqRemoved) {
+                logEvent($pdo, $_SESSION['user']['id'], 'info', "Removed Liquidsoap output for station '$slug'.");
+            }
+
+            // Restart both services to apply changes
+            shell_exec('docker compose restart icecast');
+            shell_exec('docker compose restart liquidsoap');
+            logEvent($pdo, $_SESSION['user']['id'], 'info', "Restarted Icecast and Liquidsoap after removing station '$slug'.");
+
             // LOGGING: record which station was deleted
             logEvent(
                 $pdo,
@@ -203,6 +239,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_station'])) {
             exit;
         } else {
             $errors[] = "Failed to disable station. Check permissions.";
+            logEvent(
+                $pdo,
+                $_SESSION['user']['id'],
+                'error',
+                "Failed to move station '$slug' to disabled."
+            );
         }
     }
 }
@@ -582,6 +624,10 @@ function closeEditModal() {
 </script>
 
 <?php
+echo 'User: ' . get_current_user() . "\n";
+echo 'UID: ' . getmyuid() . "\n";
+echo 'GID: ' . getmygid() . "\n";
+echo 'Dir perms: ' . substr(sprintf('%o', fileperms('/var/www/html/stations')), -4) . "\n";
+
 $pageContent = ob_get_clean();
 include __DIR__ . '/_template.php';
-?>

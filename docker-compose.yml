@@ -2,13 +2,16 @@
 # © 2025 CATALYSTS LABS
 # Licensed under LICENSE.txt / LICENSE_COMMERCIAL.txt
 
-version: '3.8'
-
 services:
   php:
-    image: php:8.3-fpm
+    build:
+      context: .
+      dockerfile: Dockerfile.php
     container_name: signalframe_php
+    user: root
     volumes:
+      - ./icecast-config:/var/www/html/icecast-config
+      - ./liquidsoap-config:/var/www/html/liquidsoap-config
       - ./admin:/var/www/html/admin
       - ./setup:/var/www/html/setup
       - ./api:/var/www/html/api
@@ -19,6 +22,9 @@ services:
       - ./config:/var/www/html/config
       - ./logs:/var/www/html/logs
       - ./nginx/conf.d:/etc/nginx/conf.d
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/var/www/html/docker-compose.yml:ro
+      - ./shared:/shared
     environment:
       - TZ=America/New_York  # Adjust to your timezone
     networks:
@@ -46,16 +52,27 @@ services:
     networks:
       - signalframe_net
 
-  # Optional: Use your own Icecast stream externally or add container here:
-  # icecast:
-  #   image: infiniteproject/icecast
-  #   container_name: signalframe_icecast
-  #   ports:
-  #     - "8000:8000"
-  #   volumes:
-  #     - ./icecast-config:/etc/icecast2
-  #   networks:
-  #     - signalframe_net
+  liquidsoap:
+    image: savonet/liquidsoap:v2.3.3
+    container_name: signalframe_liquidsoap
+    depends_on:
+      - icecast
+    volumes:
+      - ./liquidsoap-config:/etc/liquidsoap
+      - ./stations:/stations
+    command: ["liquidsoap", "/etc/liquidsoap/radio.liq"]
+    networks:
+      - signalframe_net
+
+  icecast:
+    image: infiniteproject/icecast
+    container_name: signalframe_icecast
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./icecast-config/icecast.xml:/etc/icecast.xml
+    networks:
+      - signalframe_net
 
 networks:
   signalframe_net:

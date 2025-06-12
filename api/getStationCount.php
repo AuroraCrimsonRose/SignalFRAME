@@ -19,6 +19,9 @@ function getStationCount(): int
         if (basename($dir) !== 'disabled') {
             $count++;
         }
+        else if (basename($dir) !== 'music') {
+            $count++;
+        }
     }
 
     return $count;
